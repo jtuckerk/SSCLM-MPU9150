@@ -73,11 +73,15 @@ buy us a round!
 Distributed as-is; no warranty is given.
 *****************************************************************/
 
+
+#include <math.h>
+#include "helper_3dmath.h"
 #include "I2Cdev.h"
 #include "MPU6050_9Axis_MotionApps41.h"
 #include <unistd.h>
 #include <sys/time.h>
-#include <tgmath.h>
+#include <time.h>
+
 
 // Declare device MPU6050 class
 MPU6050 mpu;
@@ -135,7 +139,8 @@ struct timespec now;
 
 float ax, ay, az, gx, gy, gz, mx, my,
     mz; // variables to hold latest sensor data values
-float q[4] = {1.0f, 0.0f, 0.0f, 0.0f}; // vector to hold quaternion
+
+Quaternion q;
 float eInt[3] = {0.0f, 0.0f,
                  0.0f}; // vector to hold integral error for Mahony method
 
@@ -259,7 +264,7 @@ void loop() {
                            gz * PI / 180.0f, my, mx, mz);
   // MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f,
   // gz*PI/180.0f, my, mx, mz);
-
+  /*
   printf("ax = ");
   printf("%d",(int)(1000 * ax));
   printf(" ay = ");
@@ -283,14 +288,14 @@ void loop() {
   printf(" mG\n");
 
   printf("q0 = ");
-  printf("%F", q[0]);
+  printf("%F", q.w);
   printf(" qx = ");
-  printf("%F", q[1]);
+  printf("%F", q.x);
   printf(" qy = ");
-  printf("%F", q[2]);
+  printf("%F", q.y);
   printf(" qz = ");
-  printf("%F\n", q[3]);
-
+  printf("%F\n", q.z);
+  */
   // Define output variables from updated quaternion---these are Tait-Bryan
   // angles, commonly used in aircraft orientation.
   // In this coordinate system, the positive z-axis is down toward Earth.
@@ -310,11 +315,11 @@ void loop() {
   // For more see
   // http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
   // which has additional links.
-  yaw = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]),
-              q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]);
-  pitch = -asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-  roll = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]),
-               q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
+  yaw = atan2(2.0f * (q.x * q.y + q.w * q.z),
+              q.w * q.w + q.x * q.x - q.y * q.y - q.z * q.z);
+  pitch = -asin(2.0f * (q.x * q.z - q.w * q.y));
+  roll = atan2(2.0f * (q.w * q.x + q.y * q.z),
+               q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z);
   pitch *= 180.0f / PI;
   yaw *= 180.0f / PI - 13.8; // Declination at Danville, California is 13
                              // degrees 48 minutes and 47 seconds on 2014-04-04
@@ -326,10 +331,11 @@ void loop() {
   printf("%F", pitch);
   printf(", ");
   printf("%F\n", roll);
-
+  /*
   printf("rate = ");
   printf("%F", (float)1.0f / deltat);
   printf(" Hz\n");
+  */
 }
 // Implementation of Sebastian Madgwick's "...efficient orientation filter
 // for... inertial/magnetic sensor arrays"
@@ -345,8 +351,8 @@ void loop() {
 // Pro Mini operating at 8 MHz!
 void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
                               float gz, float mx, float my, float mz) {
-  float q1 = q[0], q2 = q[1], q3 = q[2],
-        q4 = q[3]; // short name local variable for readability
+  float q1 = q.w, q2 = q.x, q3 = q.y,
+        q4 = q.z; // short name local variable for readability
   float norm;
   float hx, hy, _2bx, _2bz;
   float s1, s2, s3, s4;
@@ -459,10 +465,10 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
   q4 += qDot4 * deltat;
   norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
   norm = 1.0f / norm;
-  q[0] = q1 * norm;
-  q[1] = q2 * norm;
-  q[2] = q3 * norm;
-  q[3] = q4 * norm;
+  q.w = q1 * norm;
+  q.x = q2 * norm;
+  q.y = q3 * norm;
+  q.z = q4 * norm;
 }
 
 // Similar to Madgwick scheme but uses proportional and integral filtering on
@@ -470,8 +476,8 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
 // measured ones.
 void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
                             float gz, float mx, float my, float mz) {
-  float q1 = q[0], q2 = q[1], q3 = q[2],
-        q4 = q[3]; // short name local variable for readability
+  float q1 = q.w, q2 = q.x, q3 = q.y,
+        q4 = q.z; // short name local variable for readability
   float norm;
   float hx, hy, bx, bz;
   float vx, vy, vz, wx, wy, wz;
@@ -557,10 +563,10 @@ void MahonyQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
   // Normalise quaternion
   norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
   norm = 1.0f / norm;
-  q[0] = q1 * norm;
-  q[1] = q2 * norm;
-  q[2] = q3 * norm;
-  q[3] = q4 * norm;
+  q.w = q1 * norm;
+  q.x = q2 * norm;
+  q.y = q3 * norm;
+  q.z = q4 * norm;
 }
 int subTimespec(timespec *now, timespec *lastupdate) {
   int diff;
@@ -568,4 +574,12 @@ int subTimespec(timespec *now, timespec *lastupdate) {
   lastupdate->tv_sec = now->tv_sec - lastupdate->tv_sec;
   lastupdate->tv_nsec = now->tv_nsec - lastupdate->tv_nsec;
   return lastupdate->tv_sec * 1000000000 + lastupdate->tv_nsec;
+}
+int main () {
+  setup();
+  while (1){
+    loop();
+  }
+
+  return 0;
 }
