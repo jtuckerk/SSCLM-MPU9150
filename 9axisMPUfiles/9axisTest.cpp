@@ -108,24 +108,31 @@ struct XYZposition servoPositions;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 int16_t mx, my, mz;
+int16_t m2x, m2y, m2z;
 
-   initMPU(mpu);
-
+//initMPU(mpu);
+  mpu.initialize();
    std::cout << "mpu has address "<< mpu.devAddr<< std::endl;
    std::cout<<std::flush;
    usleep(100000);
 printf(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
    usleep(100000);
-initMPU(mpu2);
- std::cout << "mpu2 has address "<< mpu2.devAddr<< std::endl;
+   //initMPU(mpu2);
+   //std::cout << "mpu2 has address "<< mpu2.devAddr<< std::endl;
    usleep(100000);
-printf(mpu2.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+   //printf(mpu2.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
  while(1){
-   getXYZ(&mpu, &servoPositions);
-   usleep(10000);
-   std::cout <<"mpu1:\t"<< servoPositions.x << "\t" << servoPositions.y << "\t" << servoPositions.z;
-getXYZ(&mpu2, &servoPositions);
-   std::cout <<"\t\t\tmpu2:\t"<< servoPositions.x << "\t" << servoPositions.y << "\t" << servoPositions.z << std::endl;
+   //getXYZ(&mpu, &servoPositions);
+   //        mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    mpu.getMag(&mx, &my, &mz);
+   //	usleep(10000);
+    std::cout <<"magno 1:\t"<< mx << "\t" << my << "\t" << mz<<std::endl;
+    // mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &m2x, &m2y, &m2z);
+    //std::cout <<"\t\tmagno 2:\t"<< m2x << "\t" << m2y << "\t" << m2z << std::endl;
+    //usleep(10000);
+   //std::cout <<"mpu1:\t"<< servoPositions.x << "\t" << servoPositions.y << "\t" << servoPositions.z<<std::endl;
+//getXYZ(&mpu2, &servoPositions);
+// std::cout <<"\t\t\tmpu2:\t"<< servoPositions.x << "\t" << servoPositions.y << "\t" << servoPositions.z << std::endl;
    
 
    /*
