@@ -35,7 +35,9 @@ THE SOFTWARE.
 
 #include "I2Cdev.h"
 #include "helper_3dmath.h"
-
+///@@may be double included 
+#include <string.h>
+#include <stdio.h>
 // MotionApps 4.1 DMP implementation, built using the MPU-9150 "MotionFit" board
 #define MPU6050_INCLUDE_DMP_MOTIONAPPS41
 
@@ -73,6 +75,9 @@ THE SOFTWARE.
  | [GYRO Z][      ][MAG X ][MAG Y ][MAG Z ][ACC X ][      ][ACC Y ][      ][ACC Z ][      ][      ] |
  |  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  |
  * ================================================================================================ */
+
+#define prog_uchar uint8_t
+#define PROGMEM
 
 // this block of memory gets written to the MPU on start-up, and it seems
 // to be volatile memory, so it has to be done each time (it only takes ~1
@@ -294,7 +299,7 @@ uint8_t MPU6050::dmpInitialize() {
     // reset device
     DEBUG_PRINTLN(F("\n\nResetting MPU6050..."));
     reset();
-    delay(30); // wait after reset
+    usleep(30000); // wait after reset
 
     // disable sleep mode
     DEBUG_PRINTLN(F("Disabling sleep mode..."));
@@ -558,7 +563,8 @@ uint8_t MPU6050::dmpInitialize() {
             DEBUG_PRINTLN(F("Waiting for FIRO count >= 46..."));
             while ((fifoCount = getFIFOCount()) < 46);
             DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, min(fifoCount, 128)); // safeguard only 128 bytes
+            //getFIFOBytes(fifoBuffer, min(fifoCount, 128)); // safeguard only 128 bytes
+	    getFIFOBytes(fifoBuffer, fifoCount); // does not safeguard only 128 bytes
             DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 
@@ -569,13 +575,14 @@ uint8_t MPU6050::dmpInitialize() {
             DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
             DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, min(fifoCount, 128)); // safeguard only 128 bytes
+            //getFIFOBytes(fifoBuffer, min(fifoCount, 128)); // safeguard only 128 bytes
+	    getFIFOBytes(fifoBuffer, fifoCount); // does not safeguard only 128 bytes
             DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
             DEBUG_PRINTLN(F("Waiting for FIRO count >= 48..."));
             while ((fifoCount = getFIFOCount()) < 48);
             DEBUG_PRINTLN(F("Reading FIFO..."));
-            getFIFOBytes(fifoBuffer, min(fifoCount, 128)); // safeguard only 128 bytes
+            getFIFOBytes(fifoBuffer, fifoCount); // does not safeguard only 128 bytes
             DEBUG_PRINTLN(F("Reading interrupt status..."));
             getIntStatus();
 

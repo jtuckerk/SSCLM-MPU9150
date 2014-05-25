@@ -67,7 +67,6 @@ void setup() {
     // verify connection
     Serial.println("Testing device connections...");
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-
     // configure Arduino LED for
     pinMode(LED_PIN, OUTPUT);
 }

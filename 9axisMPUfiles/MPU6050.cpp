@@ -34,6 +34,12 @@ THE SOFTWARE.
 ===============================================
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdint.h>
 #include "MPU6050.h"
 
 /** Default constructor, uses default I2C address.
@@ -1729,9 +1735,10 @@ void MPU6050::getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int
 	
 	//read mag
 	I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
-	delay(10);
+	//@@ was dely 10
+	usleep(10000);
 	I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
-	delay(10);
+	usleep(10000);
 	I2Cdev::readBytes(MPU9150_RA_MAG_ADDRESS, MPU9150_RA_MAG_XOUT_L, 6, buffer);
 	*mx = (((int16_t)buffer[1]) << 8) | buffer[0];
         *my = (((int16_t)buffer[3]) << 8) | buffer[2];
@@ -1742,9 +1749,9 @@ void MPU6050::getMag(int16_t* mx, int16_t* my, int16_t* mz) {
     
 	//read mag
 	I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
-	delay(10);
+	usleep(10000);
 	I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
-	delay(10);
+	usleep(10000);
 	I2Cdev::readBytes(MPU9150_RA_MAG_ADDRESS, MPU9150_RA_MAG_XOUT_L, 6, buffer);
 	*mx = (((int16_t)buffer[1]) << 8) | buffer[0];
         *my = (((int16_t)buffer[3]) << 8) | buffer[2];

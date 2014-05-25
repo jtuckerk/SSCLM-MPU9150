@@ -40,6 +40,8 @@ THE SOFTWARE.
 #include "I2Cdev.h"
 //#include <avr/pgmspace.h>
 
+#define pgm_read_byte(p) (*(uint8_t *)(p))
+
 //Magnetometer Registers
 #define MPU9150_RA_MAG_ADDRESS		0x0C
 #define MPU9150_RA_MAG_XOUT_L		0x03

@@ -41,6 +41,21 @@ THE SOFTWARE.
 ===============================================
 */
 
+#include "I2Cdev.h"
+#include <stdint.h>
+//#include <glib.h>
+//#include <glib/gprintf.h>
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+/*
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -53,7 +68,7 @@ THE SOFTWARE.
 #include <sys/stat.h>
 #include <linux/i2c-dev.h>
 #include "I2Cdev.h"
-
+*/
 /** Default constructor.
  */
 I2Cdev::I2Cdev() {
