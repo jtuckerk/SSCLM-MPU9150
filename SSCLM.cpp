@@ -9,7 +9,7 @@
 #include <math.h>
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
-#include "BBBIOlib/BBBio_lib/BBBiolib.h"
+
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -40,7 +40,7 @@ struct XYZposition lockPosition;
 // need to change address of one or both MPUs
 // they will both have default address out of the box
 // changing them once should be saved on the device
-MPU6050 baseMPU(MPU6050_ADDRESS_AD0_LOW), controlMPU;
+MPU6050 baseMPU(MPU6050_ADDRESS_AD0_HIGH), controlMPU;
 
 // global mode to be set by thread3 and read by thread1
 enum mode deviceMode;
@@ -102,13 +102,7 @@ static void *thread1function(void *arg) {
 }
 static void *thread2function(void *arg) {
 
-  // if(servo positions out of bounds)
-  // light up red LED
-  // else output PWM to motors
-  BBBIO_ehrPWM_Enable(servos[0]);
-  BBBIO_ehrPWM_Enable(servos[1]);
-  BBBIO_ehrPWM_Enable(servos[2]);
-
+  
   int servoPosX, servoPosY, servoPosZ;
 
   while (1) {
@@ -129,7 +123,7 @@ static void *thread2function(void *arg) {
 int main() {
 
   initMPU(baseMPU);
-  initMPU(controlMPU);
+  //Initmpu(controlMPU);
 
   //opens file that controls servo motors
   servoDriverFile.open ("/dev/servoblaster");

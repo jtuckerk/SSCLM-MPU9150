@@ -13,7 +13,7 @@ DMP_OBJS = SSCLM.o
 $(CMN_OBJS) $(DMP_OBJS) $(RAW_OBJS) : $(HDRS)
 
 SSCLM: $(CMN_OBJS) $(DMP_OBJS)
-	$(CXX) -o $@ $^ -lm -L ${BBB} -lBBBio -lpthread 
+	$(CXX) -o $@ $^ -lm -lpthread 
 
 clean:
 	rm -f $(CMN_OBJS) $(DMP_OBJS) $(D3D_OBJS) $(RAW_OBJS)  SSCLM
