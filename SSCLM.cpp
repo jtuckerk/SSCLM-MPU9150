@@ -12,6 +12,8 @@
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
+
+
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
   int x;
@@ -77,7 +79,7 @@ float
 /* Pulse period in msec */
 #define PER (1.0E3 / FRQ)
 
-#define SERVO_MIN 20
+#define SERVO_MIN 15
 #define SERVO_MAX (180 - SERVO_MIN)
 
 SERVO servos[3] = {0, 1, 2};
@@ -87,17 +89,17 @@ std::ofstream servoDriverFile;
 static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
-
+  while(1){
   if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
     getXYZ(&baseMPU, &basePosition);
   usleep(1000);
   if (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
     getXYZ(&controlMPU, &controllerPosition);
-
+  
   // calculate neccesary servo position and writes to the servoPositions
   // global variable
   calculateServoPos(&basePosition, &controllerPosition, deviceMode);
-
+  }
   return (void *)0;
 }
 static void *thread2function(void *arg) {
@@ -112,9 +114,11 @@ static void *thread2function(void *arg) {
     servoPosZ = servoPositions.z;
     pthread_mutex_unlock(&servoPosMutex);
 
+    //std::cout << "x: "<<servoPosX<< " y: "<<servoPosY<< " z: "<<servoPosZ<<std::endl;
     setServo(servos[0], servoPosX);
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
+    usleep(100);
   }
 
   return (void *)0;
@@ -124,9 +128,14 @@ int main() {
 
   
   initMPU(controlMPU);
-  usleep(10000000);
+  usleep(100000);
 initMPU(baseMPU);
-  usleep(10000000);  
+  usleep(100000);
+lockPosition.x = 90;
+lockPosition.y = 90;
+lockPosition.z = 90;
+
+  deviceMode = MODE_COMBINED ;
 //opens file that controls servo motors
   servoDriverFile.open ("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
@@ -213,12 +222,11 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     mpu->dmpGetQuaternion(&q, fifoBuffer);
     mpu->dmpGetGravity(&gravity, &q);
     mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
-    printf("ypr  %7.2f %7.2f %7.2f    ", ypr[0] * 180 / M_PI,
-           ypr[1] * 180 / M_PI, ypr[2] * 180 / M_PI);
+    //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI, 90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
   }
-  pos->x = ypr[0] * 180 / M_PI;
-  pos->y = ypr[1] * 180 / M_PI;
-  pos->z = ypr[2] * 180 / M_PI;
+  pos->x =(ypr[0] * 180 / M_PI)+90;
+  pos->y =(ypr[1] * 180 / M_PI)+90;
+  pos->z = (ypr[2] * 180 / M_PI)+90;
 }
 
 int boundServo(int pos) {
@@ -233,6 +241,7 @@ int boundServo(int pos) {
 
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode) {
+
   int cx = controller->x;
   int cy = controller->y;
   int cz = controller->z;
@@ -248,6 +257,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
 
   case MODE_STABILIZE:
+    
     x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
     y = (2 * lockPosition.y) - by;
     z = (2 * lockPosition.z) - bz;
@@ -267,14 +277,16 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
   }
 
-  x = boundServo(cx);
-  y = boundServo(cy);
-  z = boundServo(cz);
-
+  x = boundServo(x);
+  y = boundServo(y);
+  z = boundServo(z);
+std::cout<<bx<< " "<< by<< " "<< bz;
+    std::cout<<" "<<x<<" "<<y<<" "<<z<<" "<<std::endl;
+  
   x = (int)(x / 1.8);
   y = (int)(y / 1.8);
   z = (int)(z / 1.8);
-
+  
   pthread_mutex_lock(&servoPosMutex);
   servoPositions.x = x;
   servoPositions.y = y;
@@ -283,8 +295,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 }
 
 void setServo(SERVO servoNum, int position) {
-
-  servoDriverFile<<servoNum<<"="<<position<<std::endl;
+  if (servoNum == 0)
+    position = 50;
+  servoDriverFile<<servoNum<<"="<<position<<"%"<<std::endl;
   //   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   // SM_1_duty =
   //     100.0 -
