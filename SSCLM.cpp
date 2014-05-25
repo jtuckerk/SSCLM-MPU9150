@@ -1,16 +1,17 @@
 // Self Stabilizing Controllable Laser Mount
 // Amy Pickens, Nate Honold, Tucker Kirven
 #include <fstream>
+#include <iostream>
+#include <fcntl.h>
 #include <stdio.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
-
-
+#include <pthread.h>
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
   int x;
@@ -44,7 +45,6 @@ MPU6050 baseMPU(MPU6050_ADDRESS_AD0_HIGH), controlMPU;
 
 // global mode to be set by thread3 and read by thread1
 enum mode deviceMode;
-
 // MPU control/status vars
 bool dmpReady = false; // set true if DMP init was successful
 uint8_t mpuIntStatus;  // holds actual interrupt status byte from MPU
@@ -90,7 +90,7 @@ static void *thread1function(void *arg) {
 
   if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
     getXYZ(&baseMPU, &basePosition);
-
+  usleep(1000);
   if (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
     getXYZ(&controlMPU, &controllerPosition);
 
@@ -122,10 +122,12 @@ static void *thread2function(void *arg) {
 
 int main() {
 
-  initMPU(baseMPU);
-  //Initmpu(controlMPU);
-
-  //opens file that controls servo motors
+  
+  initMPU(controlMPU);
+  usleep(10000000);
+initMPU(baseMPU);
+  usleep(10000000);  
+//opens file that controls servo motors
   servoDriverFile.open ("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
   pthread_mutexattr_init(&mutexattr);

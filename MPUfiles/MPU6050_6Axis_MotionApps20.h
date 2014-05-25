@@ -341,7 +341,7 @@ uint8_t MPU6050::dmpInitialize() {
     DEBUG_PRINTLN(F("Disabling I2C Master mode..."));
     setI2CMasterModeEnabled(false);
     DEBUG_PRINTLN(F("Setting slave 0 address to 0x68 (self)..."));
-    setSlaveAddress(0, 0x68);
+    setSlaveAddress(0, devAddr);
     DEBUG_PRINTLN(F("Resetting I2C Master control..."));
     resetI2CMaster();
     usleep(20000);
@@ -389,12 +389,12 @@ uint8_t MPU6050::dmpInitialize() {
             setXGyroOffset(xgOffset);
             setYGyroOffset(ygOffset);
             setZGyroOffset(zgOffset);
-
+	    /*@@
             DEBUG_PRINTLN(F("Setting X/Y/Z gyro user offsets to zero..."));
-            //!setXGyroOffsetUser(0);
-            //!setYGyroOffsetUser(0);
-            //!setZGyroOffsetUser(0);
-
+            setXGyroOffsetUser(0);
+            setYGyroOffsetUser(0);
+            setZGyroOffsetUser(0);
+	    */
             DEBUG_PRINTLN(F("Writing final memory update 1/7 (function unknown)..."));
             uint8_t dmpUpdate[16], j;
             uint16_t pos = 0;
@@ -453,8 +453,7 @@ uint8_t MPU6050::dmpInitialize() {
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             printf("Waiting for FIFO count > 2...\n");
-            while ((fifoCount = getFIFOCount()) < 3)
-		;
+            while ((fifoCount = getFIFOCount()) < 3);
 
             printf("Current FIFO count=%d",fifoCount);
             DEBUG_PRINTLN(fifoCount);
@@ -472,8 +471,7 @@ uint8_t MPU6050::dmpInitialize() {
             readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
-            while ((fifoCount = getFIFOCount()) < 3)
-		;
+            while ((fifoCount = getFIFOCount()) < 3);
 
             DEBUG_PRINT(F("Current FIFO count="));
             DEBUG_PRINTLN(fifoCount);

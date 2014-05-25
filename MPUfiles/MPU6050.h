@@ -14,9 +14,6 @@
 I2Cdev device library code is placed under the MIT license
 Copyright (c) 2012 Jeff Rowberg
 
-Modified by Nagavenkat Adurthi for BeagelBone Black
-
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -41,21 +38,9 @@ THE SOFTWARE.
 #define _MPU6050_H_
 
 #include "I2Cdev.h"
-//#include "SimpleTimer.h"  //this is timestpam the measurements. Uses local linux clock. As the time is calculated relative, the true time is not needed.
-
- //The initialise function of MPU6050 will initialize the timer.
-
-// supporting link:  http://forum.arduino.cc/index.php?&topic=143444.msg1079517#msg1079517
-// also: http://forum.arduino.cc/index.php?&topic=141571.msg1062899#msg1062899s
-//#ifndef __arm__
 //#include <avr/pgmspace.h>
-//#else
-#define PROGMEM /* empty */
-#define pgm_read_byte(x) (*(x))
-#define pgm_read_word(x) (*(x))
-#define pgm_read_float(x) (*(x))
-#define PSTR(STR) STR
-//#endif
+
+#define pgm_read_byte(p) (*(uint8_t *)(p))
 
 
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
@@ -698,16 +683,16 @@ class MPU6050 {
         // XG_OFFS_TC register
         uint8_t getOTPBankValid();
         void setOTPBankValid(bool enabled);
-        int8_t getXGyroOffsetTC();
-        void setXGyroOffsetTC(int8_t offset);
+        int8_t getXGyroOffset();
+        void setXGyroOffset(int8_t offset);
 
         // YG_OFFS_TC register
-        int8_t getYGyroOffsetTC();
-        void setYGyroOffsetTC(int8_t offset);
+        int8_t getYGyroOffset();
+        void setYGyroOffset(int8_t offset);
 
         // ZG_OFFS_TC register
-        int8_t getZGyroOffsetTC();
-        void setZGyroOffsetTC(int8_t offset);
+        int8_t getZGyroOffset();
+        void setZGyroOffset(int8_t offset);
 
         // X_FINE_GAIN register
         int8_t getXFineGain();
@@ -734,23 +719,23 @@ class MPU6050 {
         void setZAccelOffset(int16_t offset);
 
         // XG_OFFS_USR* registers
-        int16_t getXGyroOffset();
-        void setXGyroOffset(int16_t offset);
+        int16_t getXGyroOffsetUser();
+        void setXGyroOffsetUser(int16_t offset);
 
         // YG_OFFS_USR* register
-        int16_t getYGyroOffset();
-        void setYGyroOffset(int16_t offset);
+        int16_t getYGyroOffsetUser();
+        void setYGyroOffsetUser(int16_t offset);
 
         // ZG_OFFS_USR* register
-        int16_t getZGyroOffset();
-        void setZGyroOffset(int16_t offset);
+        int16_t getZGyroOffsetUser();
+        void setZGyroOffsetUser(int16_t offset);
         
         // INT_ENABLE register (DMP functions)
         bool getIntPLLReadyEnabled();
         void setIntPLLReadyEnabled(bool enabled);
         bool getIntDMPEnabled();
         void setIntDMPEnabled(bool enabled);
-     
+        
         // DMP_INT_STATUS
         bool getDMPInt5Status();
         bool getDMPInt4Status();
@@ -995,38 +980,9 @@ class MPU6050 {
             uint16_t dmpGetFIFOPacketSize();
         #endif
 
-
-//in the array:  [timestamp, ax,ay,az,gx,gy,gz]. convert int16 values to real acc and gyro values
-// using the range limits
-//also the bias are removed from the calculated values
-/*double * getScaledaccgyro_timestamped(double *AccGyro){
-	int16_t ax, ay, az,gx, gy, gz;
-
-	getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-
-	AccGyro[0]=IMUtimeStamper.GetTime_from_T0sec(); //time stamp the measurement
-
-	AccGyro[1]=(double)((ax+32767)*2*lima)/65534-lima;  //acc
-	AccGyro[2]=(double)((ay+32767)*2*lima)/65534-lima;
-	AccGyro[3]=(double)((az+32767)*2*lima)/65534-lima;
-
-	AccGyro[4]=(double)((gx+32767)*2*limg)/65534-limg; //gyro
-	AccGyro[5]=(double)((gy+32767)*2*limg)/65534-limg;
-	AccGyro[6]=(double)((gz+32767)*2*limg)/65534-limg;
-
-	AccGyro[4]=AccGyro[4]*3.1415926/180;   //change to rad/s
-	AccGyro[5]=AccGyro[5]*3.1415926/180;
-	AccGyro[6]=AccGyro[6]*3.1415926/180;
-
-	return AccGyro;
-}
-
-*/
     private:
         uint8_t devAddr;
         uint8_t buffer[14];
-        double lima,limg;  //limits of acc and gyro eg: 2g for +-2g range of acc and similarly for gyro.
-	//      SimpleTimer IMUtimeStamper;
 };
 
 #endif /* _MPU6050_H_ */

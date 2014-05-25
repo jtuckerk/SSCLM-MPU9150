@@ -14,8 +14,6 @@
 I2Cdev device library code is placed under the MIT license
 Copyright (c) 2012 Jeff Rowberg
 
-Modified by Nagavenkat Adurthi for BeagelBone Black
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -36,10 +34,14 @@ THE SOFTWARE.
 ===============================================
 */
 
-#include "MPU6050.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdint.h>
+#include "MPU6050.h"
+
 /** Default constructor, uses default I2C address.
  * @see MPU6050_DEFAULT_ADDRESS
  */
@@ -66,24 +68,9 @@ MPU6050::MPU6050(uint8_t address) {
  */
 void MPU6050::initialize() {
     setClockSource(MPU6050_CLOCK_PLL_XGYRO);
-
-    //change the scale for gyro here
-    setFullScaleGyroRange(MPU6050_GYRO_FS_1000);
-    limg=1000;//  deg/s
-
-    //change the scale for acc here
+    setFullScaleGyroRange(MPU6050_GYRO_FS_250);
     setFullScaleAccelRange(MPU6050_ACCEL_FS_2);
-    lima=2*9.8;// m/s^2
-
-    //set the sample rate 10 1khz for gyro. Acc is default 1khz(i think)
-    setRate(7);
-
     setSleepEnabled(false); // thanks to Jack Elston for pointing this one out!
-
-    usleep(1000000);//sleep for 1 second to let the IMU initialize everything
-
-    //    IMUtimeStamper.ResetTimer(); //reset the timer to start counting from current time.
-
 }
 
 /** Verify the I2C connection.
@@ -91,6 +78,8 @@ void MPU6050::initialize() {
  * @return True if connection is valid, false otherwise
  */
 bool MPU6050::testConnection() {
+  //@@ debugging double connection problems                                          
+    printf("device ID = %d\n", getDeviceID()); 
     return getDeviceID() == 0x34;
 }
 
@@ -1758,7 +1747,6 @@ void MPU6050::getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int
     *gx = (((int16_t)buffer[8]) << 8) | buffer[9];
     *gy = (((int16_t)buffer[10]) << 8) | buffer[11];
     *gz = (((int16_t)buffer[12]) << 8) | buffer[13];
-
 }
 /** Get 3-axis accelerometer readings.
  * These registers store the most recent accelerometer measurements.
@@ -2742,31 +2730,31 @@ uint8_t MPU6050::getOTPBankValid() {
 void MPU6050::setOTPBankValid(bool enabled) {
     I2Cdev::writeBit(devAddr, MPU6050_RA_XG_OFFS_TC, MPU6050_TC_OTP_BNK_VLD_BIT, enabled);
 }
-int8_t MPU6050::getXGyroOffsetTC() {
+int8_t MPU6050::getXGyroOffset() {
     I2Cdev::readBits(devAddr, MPU6050_RA_XG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, buffer);
     return buffer[0];
 }
-void MPU6050::setXGyroOffsetTC(int8_t offset) {
+void MPU6050::setXGyroOffset(int8_t offset) {
     I2Cdev::writeBits(devAddr, MPU6050_RA_XG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, offset);
 }
 
 // YG_OFFS_TC register
 
-int8_t MPU6050::getYGyroOffsetTC() {
+int8_t MPU6050::getYGyroOffset() {
     I2Cdev::readBits(devAddr, MPU6050_RA_YG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, buffer);
     return buffer[0];
 }
-void MPU6050::setYGyroOffsetTC(int8_t offset) {
+void MPU6050::setYGyroOffset(int8_t offset) {
     I2Cdev::writeBits(devAddr, MPU6050_RA_YG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, offset);
 }
 
 // ZG_OFFS_TC register
 
-int8_t MPU6050::getZGyroOffsetTC() {
+int8_t MPU6050::getZGyroOffset() {
     I2Cdev::readBits(devAddr, MPU6050_RA_ZG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, buffer);
     return buffer[0];
 }
-void MPU6050::setZGyroOffsetTC(int8_t offset) {
+void MPU6050::setZGyroOffset(int8_t offset) {
     I2Cdev::writeBits(devAddr, MPU6050_RA_ZG_OFFS_TC, MPU6050_TC_OFFSET_BIT, MPU6050_TC_OFFSET_LENGTH, offset);
 }
 
@@ -2832,31 +2820,31 @@ void MPU6050::setZAccelOffset(int16_t offset) {
 
 // XG_OFFS_USR* registers
 
-int16_t MPU6050::getXGyroOffset() {
+int16_t MPU6050::getXGyroOffsetUser() {
     I2Cdev::readBytes(devAddr, MPU6050_RA_XG_OFFS_USRH, 2, buffer);
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050::setXGyroOffset(int16_t offset) {
+void MPU6050::setXGyroOffsetUser(int16_t offset) {
     I2Cdev::writeWord(devAddr, MPU6050_RA_XG_OFFS_USRH, offset);
 }
 
 // YG_OFFS_USR* register
 
-int16_t MPU6050::getYGyroOffset() {
+int16_t MPU6050::getYGyroOffsetUser() {
     I2Cdev::readBytes(devAddr, MPU6050_RA_YG_OFFS_USRH, 2, buffer);
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050::setYGyroOffset(int16_t offset) {
+void MPU6050::setYGyroOffsetUser(int16_t offset) {
     I2Cdev::writeWord(devAddr, MPU6050_RA_YG_OFFS_USRH, offset);
 }
 
 // ZG_OFFS_USR* register
 
-int16_t MPU6050::getZGyroOffset() {
+int16_t MPU6050::getZGyroOffsetUser() {
     I2Cdev::readBytes(devAddr, MPU6050_RA_ZG_OFFS_USRH, 2, buffer);
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
-void MPU6050::setZGyroOffset(int16_t offset) {
+void MPU6050::setZGyroOffsetUser(int16_t offset) {
     I2Cdev::writeWord(devAddr, MPU6050_RA_ZG_OFFS_USRH, offset);
 }
 
@@ -2876,7 +2864,6 @@ bool MPU6050::getIntDMPEnabled() {
 void MPU6050::setIntDMPEnabled(bool enabled) {
     I2Cdev::writeBit(devAddr, MPU6050_RA_INT_ENABLE, MPU6050_INTERRUPT_DMP_INT_BIT, enabled);
 }
-
 
 // DMP_INT_STATUS
 
@@ -2989,7 +2976,7 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
     setMemoryStartAddress(address);
     uint8_t chunkSize;
     uint8_t *verifyBuffer;
-    uint8_t *progBuffer;
+    uint8_t *progBuffer = NULL; // Keep compiler quiet
     uint16_t i;
     uint8_t j;
     if (verify) verifyBuffer = (uint8_t *)malloc(MPU6050_DMP_MEMORY_CHUNK_SIZE);
@@ -3020,7 +3007,23 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
             setMemoryStartAddress(address);
             I2Cdev::readBytes(devAddr, MPU6050_RA_MEM_R_W, chunkSize, verifyBuffer);
             if (memcmp(progBuffer, verifyBuffer, chunkSize) != 0) {
-
+                /*Serial.print("Block write verification error, bank ");
+                Serial.print(bank, DEC);
+                Serial.print(", address ");
+                Serial.print(address, DEC);
+                Serial.print("!\nExpected:");
+                for (j = 0; j < chunkSize; j++) {
+                    Serial.print(" 0x");
+                    if (progBuffer[j] < 16) Serial.print("0");
+                    Serial.print(progBuffer[j], HEX);
+                }
+                Serial.print("\nReceived:");
+                for (uint8_t j = 0; j < chunkSize; j++) {
+                    Serial.print(" 0x");
+                    if (verifyBuffer[i + j] < 16) Serial.print("0");
+                    Serial.print(verifyBuffer[i + j], HEX);
+                }
+                Serial.print("\n");*/
                 free(verifyBuffer);
                 if (useProgMem) free(progBuffer);
                 return false; // uh oh.
@@ -3048,7 +3051,7 @@ bool MPU6050::writeProgMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8
     return writeMemoryBlock(data, dataSize, bank, address, verify, true);
 }
 bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, bool useProgMem) {
-    uint8_t *progBuffer, success, special;
+    uint8_t *progBuffer = NULL, success, special;
     uint16_t i, j;
     if (useProgMem) {
         progBuffer = (uint8_t *)malloc(8); // assume 8-byte blocks, realloc later if necessary
@@ -3070,7 +3073,13 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
 
         // write data or perform special action
         if (length > 0) {
-
+            // regular block of data to write
+            /*Serial.print("Writing config block to bank ");
+            Serial.print(bank);
+            Serial.print(", offset ");
+            Serial.print(offset);
+            Serial.print(", length=");
+            Serial.println(length);*/
             if (useProgMem) {
                 if (sizeof(progBuffer) < length) progBuffer = (uint8_t *)realloc(progBuffer, length);
                 for (j = 0; j < length; j++) progBuffer[j] = pgm_read_byte(data + i + j);
@@ -3090,7 +3099,9 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
             } else {
                 special = data[i++];
             }
-
+            /*Serial.print("Special command code ");
+            Serial.print(special, HEX);
+            Serial.println(" found...");*/
             if (special == 0x01) {
                 // enable DMP-related interrupts
                 
@@ -3137,4 +3148,3 @@ uint8_t MPU6050::getDMPConfig2() {
 void MPU6050::setDMPConfig2(uint8_t config) {
     I2Cdev::writeByte(devAddr, MPU6050_RA_DMP_CFG_2, config);
 }
-
