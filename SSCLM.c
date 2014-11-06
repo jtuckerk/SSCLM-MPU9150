@@ -33,7 +33,7 @@ XYZpos servoPositions;
 // need to change address of one or both MPUs
 // they will both have default address out of the box
 // changing them once should be saved on the device
-MPU6050 baseMPU, controlMPU;
+MPU6050 baseMPU(mpu6050_address_ad0_high), controlMPU;
 
 // global mode to be set by thread3 and read by thread1
 enum mode deviceMode;
