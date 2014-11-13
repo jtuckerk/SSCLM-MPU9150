@@ -1,7 +1,7 @@
 
 all: SSCLM
 
-HDRS = ./MPUfiles/helper_3dmath.h ./MPUfiles/I2Cdev.h ./MPUfiles/MPU6050_6Axis_MotionApps20.h ./MPUfiles/MPU6050.h 
+HDRS = ./MPUfiles/helper_3dmath.h ./MPUfiles/I2Cdev.h ./MPUfiles/MPU6050_6Axis_MotionApps20.h ./MPUfiles/MPU6050.h ./BBBIOlib/BBBio_lib/BBBiolib.h" 
 CMN_OBJS = I2Cdev.o MPU6050.o
 DMP_OBJS = SSCLM.o
 

@@ -453,7 +453,8 @@ uint8_t MPU6050::dmpInitialize() {
             writeMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             printf("Waiting for FIFO count > 2...\n");
-            while ((fifoCount = getFIFOCount()) < 3);
+            while ((fifoCount = getFIFOCount()) < 3)
+		;
 
             printf("Current FIFO count=%d",fifoCount);
             DEBUG_PRINTLN(fifoCount);
@@ -471,7 +472,8 @@ uint8_t MPU6050::dmpInitialize() {
             readMemoryBlock(dmpUpdate + 3, dmpUpdate[2], dmpUpdate[0], dmpUpdate[1]);
 
             DEBUG_PRINTLN(F("Waiting for FIFO count > 2..."));
-            while ((fifoCount = getFIFOCount()) < 3);
+            while ((fifoCount = getFIFOCount()) < 3)
+		;
 
             DEBUG_PRINT(F("Current FIFO count="));
             DEBUG_PRINTLN(fifoCount);

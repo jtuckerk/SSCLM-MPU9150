@@ -1,5 +1,3 @@
-
-//hellllllooooo
 // Self Stabilizing Controllable Laser Mount
 // Amy Pickens, Nate Honold, Tucker Kirven
 
@@ -11,6 +9,7 @@
 #include <math.h>
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
+#include "BBBIOlib/BBBio_lib/BBBiolib.h"
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -22,11 +21,12 @@ struct XYZposition {
 // enum for the mode the device is in
 enum mode { STABALIZE, CONTROLLABLE, COMBINED_MODE };
 
-// MPU init forward declaration
+// forward declarations
 void initMPU(MPU6050 mpu);
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode);
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
+void setServo(SERVO servoNum, int position);
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -63,6 +63,19 @@ float euler[3];      // [psi, theta, phi]    Euler angle container
 float
     ypr[3]; // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
+/* Servo values for TG9 servos: */
+/* Servo 0 degree angle pulse high time in msec */
+#define SRV_0 0.45
+/* Servo 180 degree angle pulse high time in msec */
+#define SRV_180 2.45
+
+/* Pulse repetition frequency in Hz */
+#define FRQ 50.0f
+/* Pulse period in msec */
+#define PER (1.0E3 / FRQ)
+typedef int SERVO;
+SERVO servos[3] = {BBBIO_PWMSS0, BBBIO_PWMSS1, BBBIO_PWMSS2};
+
 static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
@@ -79,11 +92,28 @@ static void *thread1function(void *arg) {
 
   return (void *)0;
 }
-static void *thread2function(void *arg) { 
+static void *thread2function(void *arg) {
 
-  //if(servo positions out of bounds)
-  //light up red LED
-  //else output PWM to motors
+  // if(servo positions out of bounds)
+  // light up red LED
+  // else output PWM to motors
+  BBBIO_ehrPWM_Enable(servos[0]);
+  BBBIO_ehrPWM_Enable(servos[1]);
+  BBBIO_ehrPWM_Enable(servos[2]);
+
+  int servoPosX, servoPosY, servoPosZ;
+
+  while (1) {
+    //!should do mutex or semaphore lock & unlock for data acces
+    servoPosX = servoPositions.x;
+    servoPosY = servoPositions.y;
+    servoPosZ = servoPositions.z;
+    //!mutex unlock
+
+    setServo(servos[0], servoPosX);
+    setServo(servos[1], servoPosY);
+    setServo(servos[2], servoPosZ);
+  }
 
   return (void *)0;
 }
@@ -181,3 +211,11 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
 }
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode) {}
+void setServo(SERVO servoNum, int position) {
+  float SM_1_duty; /* Servomotor , connect to ePWM0A */
+  SM_1_duty =
+      100.0 -
+      ((SRV_0 / PER) + (degree / 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
+  printf("Angle : %d , duty : %f\n", degree, SM_1_duty);
+  BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
+}
