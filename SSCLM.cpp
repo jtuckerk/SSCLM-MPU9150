@@ -26,6 +26,7 @@ void initMPU(MPU6050 mpu);
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode);
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
+typedef int SERVO;
 void setServo(SERVO servoNum, int position);
 
 // global to hold the positions the servo should be in
@@ -73,7 +74,7 @@ float
 #define FRQ 50.0f
 /* Pulse period in msec */
 #define PER (1.0E3 / FRQ)
-typedef int SERVO;
+
 SERVO servos[3] = {BBBIO_PWMSS0, BBBIO_PWMSS1, BBBIO_PWMSS2};
 
 static void *thread1function(void *arg) {
@@ -215,7 +216,7 @@ void setServo(SERVO servoNum, int position) {
   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   SM_1_duty =
       100.0 -
-      ((SRV_0 / PER) + (degree / 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
-  printf("Angle : %d , duty : %f\n", degree, SM_1_duty);
+      ((SRV_0 / PER) + (position/ 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
+  printf("Angle : %d , duty : %f\n", position, SM_1_duty);
   BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
 }

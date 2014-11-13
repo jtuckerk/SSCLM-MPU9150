@@ -1,8 +1,10 @@
 
 all: SSCLM
 
-HDRS = ./MPUfiles/helper_3dmath.h ./MPUfiles/I2Cdev.h ./MPUfiles/MPU6050_6Axis_MotionApps20.h ./MPUfiles/MPU6050.h ./BBBIOlib/BBBio_lib/BBBiolib.h" 
-CMN_OBJS = I2Cdev.o MPU6050.o
+MPU = MPUfiles
+BBB = BBBIOlib/BBBio_lib
+HDRS = $(MPU)/helper_3dmath.h $(MPU)/I2Cdev.h $(MPU)/MPU6050_6Axis_MotionApps20.h $(MPU)/MPU6050.h $(BBB)
+CMN_OBJS = $(MPU)/I2Cdev.o $(MPU)/MPU6050.o 
 DMP_OBJS = SSCLM.o
 
 # Set DMP FIFO rate to 20Hz to avoid overflows on 3d demo.  See comments in
@@ -11,7 +13,7 @@ DMP_OBJS = SSCLM.o
 $(CMN_OBJS) $(DMP_OBJS) $(RAW_OBJS) : $(HDRS)
 
 SSCLM: $(CMN_OBJS) $(DMP_OBJS)
-	$(CXX) -o $@ $^ -lm
+	$(CXX) -o $@ $^ -lm -L ${BBB} -lBBBio -lpthread 
 
 clean:
 	rm -f $(CMN_OBJS) $(DMP_OBJS) $(D3D_OBJS) $(RAW_OBJS)  SSCLM
