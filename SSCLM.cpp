@@ -273,9 +273,17 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
             break;
 
         case MODE_COMBINED:
-            x = 50;
-            y = 50;
-            z = 50;
+            x = (2 * cx) - bx;  // cx - (bx - cx)
+            y = (2 * cy) - by;
+            z = (2 * cz) - bz;
+
+            x = boundServo(x);
+            y = boundServo(y);
+            z = boundServo(z);
+
+            x = (int)(x/1.8);
+            y = (int)(y/1.8);
+            z = (int)(z/1.8);
 
             break;
         default:
