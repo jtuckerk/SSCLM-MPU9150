@@ -19,7 +19,7 @@ struct XYZposition {
 };
 
 // enum for the mode the device is in
-enum mode { STABALIZE, CONTROLLABLE, COMBINED_MODE };
+enum mode { MODE_STABILIZE, MODE_CONTROLLABLE, MODE_COMBINED };
 
 // forward declarations
 void initMPU(MPU6050 mpu);
@@ -77,14 +77,16 @@ float
 
 SERVO servos[3] = {BBBIO_PWMSS0, BBBIO_PWMSS1, BBBIO_PWMSS2};
 
+pthread_mutex_t servoPosMutex;
+
 static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
 
-  if (deviceMode == STABALIZE || deviceMode == COMBINED_MODE)
+  if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
     getXYZ(&baseMPU, &basePosition);
 
-  if (deviceMode == CONTROLLABLE || deviceMode == COMBINED_MODE)
+  if (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
     getXYZ(&controlMPU, &controllerPosition);
 
   // calculate neccesary servo position and writes to the servoPositions
@@ -105,11 +107,11 @@ static void *thread2function(void *arg) {
   int servoPosX, servoPosY, servoPosZ;
 
   while (1) {
-    //!should do mutex or semaphore lock & unlock for data acces
+    pthread_mutex_lock(&servoPosMutex);
     servoPosX = servoPositions.x;
     servoPosY = servoPositions.y;
     servoPosZ = servoPositions.z;
-    //!mutex unlock
+    pthread_mutex_unlock(&servoPosMutex);
 
     setServo(servos[0], servoPosX);
     setServo(servos[1], servoPosY);
@@ -123,6 +125,11 @@ int main() {
 
   initMPU(baseMPU);
   initMPU(controlMPU);
+
+  pthread_mutexattr_t mutexattr;
+  pthread_mutexattr_init(&mutexattr);
+  pthread_mutex_init(&servoPosMutex, &mutexattr);
+  pthread_mutexattr_destroy(&mutexattr);
 
   pthread_t thread1, thread2;
   pthread_attr_t myattr;
@@ -211,7 +218,19 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   pos->z = ypr[2] * 180 / M_PI;
 }
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
-                       mode deviceMode) {}
+                       mode deviceMode) {
+    switch(deviceMode) {
+        case MODE_CONTROLLABLE:
+
+            break;
+        case MODE_STABILIZE:
+
+            break;
+        case MODE_COMBINED:
+
+            break;
+    }
+}
 void setServo(SERVO servoNum, int position) {
   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   SM_1_duty =
