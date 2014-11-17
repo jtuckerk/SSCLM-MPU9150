@@ -19,7 +19,7 @@ struct XYZposition {
 };
 
 // enum for the mode the device is in
-enum mode { MODE_STABILIZE, MODE_CONTROLLABLE, MODE_COMBINED };
+enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED };
 
 // forward declarations
 void initMPU(MPU6050 mpu);
@@ -34,6 +34,8 @@ void setServo(SERVO servoNum, int position);
 // Karsai wants the value passed to thread2 to be a
 // change in the current position - not an absolute value
 struct XYZposition servoPositions;
+
+struct XYZposition lockPosition;
 
 // need to change address of one or both MPUs
 // they will both have default address out of the box
@@ -74,6 +76,10 @@ float
 #define FRQ 50.0f
 /* Pulse period in msec */
 #define PER (1.0E3 / FRQ)
+
+
+#define SERVO_MIN 20
+#define SERVO_MAX (180 - SERVO_MIN)
 
 SERVO servos[3] = {BBBIO_PWMSS0, BBBIO_PWMSS1, BBBIO_PWMSS2};
 
@@ -217,20 +223,75 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   pos->y = ypr[1] * 180 / M_PI;
   pos->z = ypr[2] * 180 / M_PI;
 }
-void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
-                       mode deviceMode) {
-    switch(deviceMode) {
-        case MODE_CONTROLLABLE:
 
-            break;
-        case MODE_STABILIZE:
-
-            break;
-        case MODE_COMBINED:
-
-            break;
+int boundServo (int pos) {
+    if(pos > SERVO_MAX) {
+        return SERVO_MAX;
+    } else if (pos < SERVO_MIN) {
+        return SERVO_MIN;
+    } else {
+        return pos;
     }
 }
+
+void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
+                       mode deviceMode) {
+    int cx = controller->x;
+    int cy = controller->y;
+    int cz = controller->z;
+    int bx = base->x;
+    int by = base->y;
+    int bz = base->z;
+
+    int x,y,z;
+
+    switch(deviceMode) {
+        case MODE_CONTROLLABLE:
+            x = boundServo(cx);
+            y = boundServo(cy);
+            z = boundServo(cz);
+
+            x = (int)(x/1.8);
+            y = (int)(y/1.8);
+            z = (int)(z/1.8);
+
+            break;
+
+        case MODE_STABILIZE:
+            x = (2 * lockPosition.x) - bx;  // lockPosition.x - (bx - lockPosition.x)
+            y = (2 * lockPosition.y) - by;
+            z = (2 * lockPosition.z) - bz;
+
+            x = boundServo(x);
+            y = boundServo(y);
+            z = boundServo(z);
+
+            x = (int)(x/1.8);
+            y = (int)(y/1.8);
+            z = (int)(z/1.8);
+
+            break;
+
+        case MODE_COMBINED:
+            x = 50;
+            y = 50;
+            z = 50;
+
+            break;
+        default:
+            x = 50;
+            y = 50;
+            z = 50;
+            break;
+    }
+
+    pthread_mutex_lock(&servoPosMutex);
+    servoPositions.x = x;
+    servoPositions.y = y;
+    servoPositions.z = z;
+    pthread_mutex_unlock(&servoPosMutex);
+}
+
 void setServo(SERVO servoNum, int position) {
   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   SM_1_duty =
