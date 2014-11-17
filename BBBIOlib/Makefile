@@ -32,7 +32,6 @@ BBBiolib_ADCTSC.o : ${LIB_PATH}BBBiolib_ADCTSC.c ${LIB_PATH}BBBiolib_ADCTSC.h
 
 
 install : libBBBio.a 
-	
 
 #---------------------------------------------------
 # Demo
