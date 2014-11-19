@@ -325,6 +325,8 @@ void buttons() {
   // if button3 pushed (and released) 
   // deviceMode = MODE_COMBINED; 
 
+  // libraries - BCM or Wiring Pie
+
 	
 } 
 
