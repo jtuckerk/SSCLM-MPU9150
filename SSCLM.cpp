@@ -77,7 +77,6 @@ float
 /* Pulse period in msec */
 #define PER (1.0E3 / FRQ)
 
-
 #define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
 
@@ -224,87 +223,72 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   pos->z = ypr[2] * 180 / M_PI;
 }
 
-int boundServo (int pos) {
-    if(pos > SERVO_MAX) {
-        return SERVO_MAX;
-    } else if (pos < SERVO_MIN) {
-        return SERVO_MIN;
-    } else {
-        return pos;
-    }
+int boundServo(int pos) {
+  if (pos > SERVO_MAX) {
+    return SERVO_MAX;
+  } else if (pos < SERVO_MIN) {
+    return SERVO_MIN;
+  } else {
+    return pos;
+  }
 }
 
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode) {
-    int cx = controller->x;
-    int cy = controller->y;
-    int cz = controller->z;
-    int bx = base->x;
-    int by = base->y;
-    int bz = base->z;
+  int cx = controller->x;
+  int cy = controller->y;
+  int cz = controller->z;
+  int bx = base->x;
+  int by = base->y;
+  int bz = base->z;
 
-    int x,y,z;
+  int x, y, z;
 
-    switch(deviceMode) {
-        case MODE_CONTROLLABLE:
-            x = boundServo(cx);
-            y = boundServo(cy);
-            z = boundServo(cz);
+  switch (deviceMode) {
+  case MODE_CONTROLLABLE:
+    // simply sets according to controller
+    break;
 
-            x = (int)(x/1.8);
-            y = (int)(y/1.8);
-            z = (int)(z/1.8);
+  case MODE_STABILIZE:
+    x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
+    y = (2 * lockPosition.y) - by;
+    z = (2 * lockPosition.z) - bz;
 
-            break;
+    break;
 
-        case MODE_STABILIZE:
-            x = (2 * lockPosition.x) - bx;  // lockPosition.x - (bx - lockPosition.x)
-            y = (2 * lockPosition.y) - by;
-            z = (2 * lockPosition.z) - bz;
+  case MODE_COMBINED:
+    x = (2 * cx) - bx; // cx - (bx - cx)
+    y = (2 * cy) - by;
+    z = (2 * cz) - bz;
 
-            x = boundServo(x);
-            y = boundServo(y);
-            z = boundServo(z);
+    break;
+  default:
+    x = 50;
+    y = 50;
+    z = 50;
+    break;
+  }
 
-            x = (int)(x/1.8);
-            y = (int)(y/1.8);
-            z = (int)(z/1.8);
+  x = boundServo(cx);
+  y = boundServo(cy);
+  z = boundServo(cz);
 
-            break;
+  x = (int)(x / 1.8);
+  y = (int)(y / 1.8);
+  z = (int)(z / 1.8);
 
-        case MODE_COMBINED:
-            x = (2 * cx) - bx;  // cx - (bx - cx)
-            y = (2 * cy) - by;
-            z = (2 * cz) - bz;
-
-            x = boundServo(x);
-            y = boundServo(y);
-            z = boundServo(z);
-
-            x = (int)(x/1.8);
-            y = (int)(y/1.8);
-            z = (int)(z/1.8);
-
-            break;
-        default:
-            x = 50;
-            y = 50;
-            z = 50;
-            break;
-    }
-
-    pthread_mutex_lock(&servoPosMutex);
-    servoPositions.x = x;
-    servoPositions.y = y;
-    servoPositions.z = z;
-    pthread_mutex_unlock(&servoPosMutex);
+  pthread_mutex_lock(&servoPosMutex);
+  servoPositions.x = x;
+  servoPositions.y = y;
+  servoPositions.z = z;
+  pthread_mutex_unlock(&servoPosMutex);
 }
 
 void setServo(SERVO servoNum, int position) {
   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   SM_1_duty =
       100.0 -
-      ((SRV_0 / PER) + (position/ 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
+      ((SRV_0 / PER) + (position / 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
   printf("Angle : %d , duty : %f\n", position, SM_1_duty);
   BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
 }
