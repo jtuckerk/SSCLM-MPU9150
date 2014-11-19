@@ -292,3 +292,37 @@ void setServo(SERVO servoNum, int position) {
   printf("Angle : %d , duty : %f\n", position, SM_1_duty);
   BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
 }
+
+
+// 3 buttons- 1 for each mode ? 
+void buttons() { 
+
+  // mode 1- MODE_CONTROLLABLE
+  // if button1 pushed (and released) 
+  // deviceMode = MODE_CONTROLLABLE; 
+
+  // mode 2- MODE_STABILIZE
+  // if button2 pushed (and released) 
+  // deviceMode = MODE_STABILIZE; 
+
+  // mode 3- MODE_COMBINED
+  // if button3 pushed (and released) 
+  // deviceMode = MODE_COMBINED; 
+
+  // libraries - BCM or Wiring Pie
+
+	
+} 
+
+
+
+
+
+
+
+
+
+
+
+
+
