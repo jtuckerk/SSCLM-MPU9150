@@ -9,7 +9,7 @@
 #include <math.h>
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
-#include "BBBIOlib/BBBio_lib/BBBiolib.h"
+
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
