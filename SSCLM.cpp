@@ -1,6 +1,6 @@
 // Self Stabilizing Controllable Laser Mount
 // Amy Pickens, Nate Honold, Tucker Kirven
-
+#include <fstream>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -80,10 +80,10 @@ float
 #define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
 
-SERVO servos[3] = {BBBIO_PWMSS0, BBBIO_PWMSS1, BBBIO_PWMSS2};
+SERVO servos[3] = {0, 1, 2};
 
 pthread_mutex_t servoPosMutex;
-
+std::ofstream servoDriverFile;
 static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
@@ -131,6 +131,8 @@ int main() {
   initMPU(baseMPU);
   initMPU(controlMPU);
 
+  //opens file that controls servo motors
+  servoDriverFile.open ("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
   pthread_mutexattr_init(&mutexattr);
   pthread_mutex_init(&servoPosMutex, &mutexattr);
@@ -285,12 +287,15 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 }
 
 void setServo(SERVO servoNum, int position) {
-  float SM_1_duty; /* Servomotor , connect to ePWM0A */
-  SM_1_duty =
-      100.0 -
-      ((SRV_0 / PER) + (position / 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
-  printf("Angle : %d , duty : %f\n", position, SM_1_duty);
-  BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
+
+  servoDriverFile<<servoNum<<"="<<position<<std::endl;
+  //   float SM_1_duty; /* Servomotor , connect to ePWM0A */
+  // SM_1_duty =
+  //     100.0 -
+  //     ((SRV_0 / PER) + (position / 180.0) * ((SRV_180 - SRV_0) / PER)) * 100.0;
+  // printf("Angle : %d , duty : %f\n", position, SM_1_duty);
+  // BBBIO_PWMSS_Setting(BBBIO_PWMSS0, FRQ, SM_1_duty, SM_1_duty); /* Set up PWM */
+
 }
 
 
