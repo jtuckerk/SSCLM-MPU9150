@@ -41,6 +41,7 @@ THE SOFTWARE.
 ///@@may be double included
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 // MotionApps 4.1 DMP implementation, built using the MPU-9150 "MotionFit" board
 #define MPU6050_INCLUDE_DMP_MOTIONAPPS41
 

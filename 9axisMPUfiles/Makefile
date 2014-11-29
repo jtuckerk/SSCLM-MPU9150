@@ -12,7 +12,7 @@ DMP_OBJS = MPU9150_AHRS.o
 $(CMN_OBJS) $(DMP_OBJS) $(RAW_OBJS) : $(HDRS)
 
 MPU9150_AHRS: $(CMN_OBJS) $(DMP_OBJS)
-	$(CXX) -o $@ $^ -lm -lpthread 
+	$(CXX) -o $@ $^ -lm -lpthread -lrt 
 
 clean:
 	rm -f $(CMN_OBJS) $(DMP_OBJS) $(D3D_OBJS) $(RAW_OBJS)  MPU9150_AHRS
