@@ -164,7 +164,7 @@ void setup(MPU6050 mpu) {
 
   MagRate = 10; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are
                 // reasonable values
-
+  mpu.checkMagStatus(
   // Digital low pass filter configuration.
   // It also determines the internal sampling rate used by the device as shown
   // in the table below.
