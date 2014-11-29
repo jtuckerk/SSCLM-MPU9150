@@ -86,10 +86,10 @@ Distributed as-is; no warranty is given.
 
 
 // Declare device MPU6050 class
-MPU6050 mpu;
+
 int subTimespec(timespec *now, timespec *lastupdate);
 void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
-                              float gz, float mx, float my, float mz);
+                              float gz, float mx, float my, float mz,MPU6050 mpu);
 // global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference
 // System)
 #define PI 3.141592
@@ -141,8 +141,8 @@ struct timespec now;
 
 float ax, ay, az, gx, gy, gz, mx, my,
     mz; // variables to hold latest sensor data values
-
-Quaternion q;
+float ax2, ay2, az2, gx2, gy2, gz2, mx2, my2,mz2;
+Quaternion q, q5;
 float eInt[3] = {0.0f, 0.0f,
                  0.0f}; // vector to hold integral error for Mahony method
 
@@ -204,6 +204,7 @@ void loop(MPU6050 mpu) {
       1) { // wait for data ready status register to update all data registers
     mcount++;
     // read the raw sensor data
+    if(mpu.devAddr ==0x68){
     mpu.getAcceleration(&a1, &a2, &a3);
     ax = a1 * 2.0f / 32768.0f; // 2 g full range for accelerometer
     ay = a2 * 2.0f / 32768.0f;
@@ -213,6 +214,17 @@ void loop(MPU6050 mpu) {
     gx = g1 * 250.0f / 32768.0f; // 250 deg/s full range for gyroscope
     gy = g2 * 250.0f / 32768.0f;
     gz = g3 * 250.0f / 32768.0f;
+    }else
+    mpu.getAcceleration(&a1, &a2, &a3);
+    ax2 = a1 * 2.0f / 32768.0f; // 2 g full range for accelerometer
+    ay2 = a2 * 2.0f / 32768.0f;
+    az2 = a3 * 2.0f / 32768.0f;
+
+    mpu.getRotation(&g1, &g2, &g3);
+    gx2 = g1 * 250.0f / 32768.0f; // 250 deg/s full range for gyroscope
+    gy2 = g2 * 250.0f / 32768.0f;
+    gz2 = g3 * 250.0f / 32768.0f;
+  }
     //  The gyros and accelerometers can in principle be calibrated in addition
     //  to any factory calibration but they are generally
     //  pretty accurate. You can check the accelerometer by making sure the
@@ -228,7 +240,7 @@ void loop(MPU6050 mpu) {
     //  should provide a pretty good calibration offset. Don't forget that for
     //  the MPU9150, the magnetometer x- and y-axes are switched
     //  compared to the gyro and accelerometer!
-    if (mcount > 50 / MagRate) { // this is a poor man's way of setting the
+    if (mcount > 1000 / MagRate&& mpu.devAddr == 0x68) { // this is a poor man's way of setting the
                                    // magnetometer read rate (see below)
       mpu.getMag(&m1, &m2, &m3);
       mx = m1 * 10.0f * 1229.0f / 4096.0f + 18.0f; // milliGauss (1229
@@ -241,8 +253,20 @@ void loop(MPU6050 mpu) {
       mz = m3 * 10.0f * 1229.0f / 4096.0f + 270.0f;
       mcount = 0;
     }
+    else if(mcount > 1000 / MagRate&& mpu.devAddr == 0x69) { // this is a poor man's way of setting the
+                  // magnetometer read rate (see below)
+      mpu.getMag(&m1, &m2, &m3);
+      mx2 = m1 * 10.0f * 1229.0f / 4096.0f + 18.0f; // milliGauss (1229
+                                                   // microTesla per 2^12 bits,
+                                                   // 10 mG per microTesla)
+      my2 = m2 * 10.0f * 1229.0f / 4096.0f + 70.0f; // apply calibration offsets
+                                                   // in mG that correspond to
+                                                   // your environment and
+                                                   // magnetometer
+      mz2 = m3 * 10.0f * 1229.0f / 4096.0f + 270.0f;
+      mcount = 0;
   }
-  float norm;
+  /* float norm;
 norm = sqrt(mx * mx + my * my + mz * mz);
   if (norm == 0.0f)
     return; // handle NaN
@@ -251,7 +275,8 @@ norm = sqrt(mx * mx + my * my + mz * mz);
   my *= norm;
   mz *= norm;
   printf("x ,y ,z : %F, %F, %F\n", mx,my,mz);
-  //std::cout<< mx << "\t" << my << "\t" << mz <<std::endl;
+  */ 
+ //std::cout<< mx << "\t" << my << "\t" << mz <<std::endl;
   //@@ use gettime stuff
   clock_gettime(CLOCK_REALTIME, &now);
   //  now = micros();
@@ -272,8 +297,12 @@ norm = sqrt(mx * mx + my * my + mz * mz);
   // convenient orientation convention.
   // This is ok by aircraft orientation standards!
   // Pass gyro rate as rad/s
+  if(mpu.devAddr == 0x68)
   MadgwickQuaternionUpdate(ax, ay, az, gx * PI / 180.0f, gy * PI / 180.0f,
-                           gz * PI / 180.0f, my, mx, mz);
+                           gz * PI / 180.0f, my, mx, mz, mpu);
+  else
+  MadgwickQuaternionUpdate(ax2, ay2, az2, gx2 * PI / 180.0f, gy2 * PI / 180.0f,
+                           gz2 * PI / 180.0f, my2, mx2, mz2, mpu);    
   // MahonyQuaternionUpdate(ax, ay, az, gx*PI/180.0f, gy*PI/180.0f,
   // gz*PI/180.0f, my, mx, mz);
   /*
@@ -336,15 +365,16 @@ norm = sqrt(mx * mx + my * my + mz * mz);
   yaw *= 180.0f / PI - 13.8; // Declination at Danville, California is 13
                              // degrees 48 minutes and 47 seconds on 2014-04-04
   roll *= 180.0f / PI;
-  /*
+  
   printf("Yaw, Pitch, Roll: ");
   printf("%F", yaw);
   printf(", ");
   printf("%F", pitch);
   printf(", ");
-  printf("%F\n", roll);
-  */  
-/*
+  printf("%F\t", roll);
+  if (mpu.devAddr == 0x69)
+    printf("\n");
+  /*
   printf("rate = ");
   printf("%F", (float)1.0f / deltat);
   printf(" Hz\n");
@@ -363,9 +393,15 @@ norm = sqrt(mx * mx + my * my + mz * mz);
 // but is much less computationally intensive---it can be performed on a 3.3 V
 // Pro Mini operating at 8 MHz!
 void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
-                              float gz, float mx, float my, float mz) {
+                              float gz, float mx, float my, float mz, MPU6050 mpu) {
   float q1 = q.w, q2 = q.x, q3 = q.y,
         q4 = q.z; // short name local variable for readability
+  if(mpu.devAddr == 0x69){
+    q1 = q5.w;
+    q2 = q5.x;
+    q3 = q5.y;
+    q4 = q5.z;
+      }
   float norm;
   float hx, hy, _2bx, _2bz;
   float s1, s2, s3, s4;
@@ -478,10 +514,17 @@ void MadgwickQuaternionUpdate(float ax, float ay, float az, float gx, float gy,
   q4 += qDot4 * deltat;
   norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4); // normalise quaternion
   norm = 1.0f / norm;
+  if(mpu.devAddr ==0x68){
   q.w = q1 * norm;
   q.x = q2 * norm;
   q.y = q3 * norm;
   q.z = q4 * norm;
+  }else{
+    q5.w = q1 * norm;
+    q5.x = q2 * norm;
+    q5.y = q3 * norm;
+    q5.z = q4 * norm;
+  }
 }
 
 // Similar to Madgwick scheme but uses proportional and integral filtering on
@@ -589,10 +632,12 @@ int subTimespec(timespec *now, timespec *lastupdate) {
   return lastupdate->tv_sec * 1000000000 + lastupdate->tv_nsec;
 }
 int main () {
-
-  setup();
+  MPU6050 mpu, mpu2(0x69);
+  setup(mpu);
+  setup(mpu2);
   while (1){
-    loop();
+    loop(mpu);
+    loop(mpu2);
   }
 
   return 0;

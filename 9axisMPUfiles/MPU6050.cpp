@@ -1749,6 +1749,7 @@ void MPU6050::getMag(int16_t* mx, int16_t* my, int16_t* mz) {
     
 	//read mag
 	I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
+	printf("\ndevice address: %d\n", devAddr); 
 	usleep(10000);
 	I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
 	usleep(10000);
