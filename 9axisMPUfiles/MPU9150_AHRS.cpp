@@ -81,6 +81,8 @@ Distributed as-is; no warranty is given.
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
+#include <stdio.h>
+#include <iostream>
 
 
 // Declare device MPU6050 class
@@ -226,7 +228,7 @@ void loop(MPU6050 mpu) {
     //  should provide a pretty good calibration offset. Don't forget that for
     //  the MPU9150, the magnetometer x- and y-axes are switched
     //  compared to the gyro and accelerometer!
-    if (mcount > 1000 / MagRate) { // this is a poor man's way of setting the
+    if (mcount > 50 / MagRate) { // this is a poor man's way of setting the
                                    // magnetometer read rate (see below)
       mpu.getMag(&m1, &m2, &m3);
       mx = m1 * 10.0f * 1229.0f / 4096.0f + 18.0f; // milliGauss (1229
@@ -240,6 +242,16 @@ void loop(MPU6050 mpu) {
       mcount = 0;
     }
   }
+  float norm;
+norm = sqrt(mx * mx + my * my + mz * mz);
+  if (norm == 0.0f)
+    return; // handle NaN
+  norm = 1.0f / norm;
+  mx *= norm;
+  my *= norm;
+  mz *= norm;
+  printf("x ,y ,z : %F, %F, %F\n", mx,my,mz);
+  //std::cout<< mx << "\t" << my << "\t" << mz <<std::endl;
   //@@ use gettime stuff
   clock_gettime(CLOCK_REALTIME, &now);
   //  now = micros();
@@ -324,14 +336,15 @@ void loop(MPU6050 mpu) {
   yaw *= 180.0f / PI - 13.8; // Declination at Danville, California is 13
                              // degrees 48 minutes and 47 seconds on 2014-04-04
   roll *= 180.0f / PI;
-
+  /*
   printf("Yaw, Pitch, Roll: ");
   printf("%F", yaw);
   printf(", ");
   printf("%F", pitch);
   printf(", ");
   printf("%F\n", roll);
-  /*
+  */  
+/*
   printf("rate = ");
   printf("%F", (float)1.0f / deltat);
   printf(" Hz\n");
