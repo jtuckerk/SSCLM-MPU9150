@@ -589,6 +589,7 @@ int subTimespec(timespec *now, timespec *lastupdate) {
   return lastupdate->tv_sec * 1000000000 + lastupdate->tv_nsec;
 }
 int main () {
+
   setup();
   while (1){
     loop();
