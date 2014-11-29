@@ -146,7 +146,7 @@ Quaternion q;
 float eInt[3] = {0.0f, 0.0f,
                  0.0f}; // vector to hold integral error for Mahony method
 
-void setup() {
+void setup(MPU6050 mpu) {
 
   // initialize MPU6050 device
   printf(("Initializing I2C devices..."));
@@ -199,7 +199,7 @@ void setup() {
   mpu.setIntDataReadyEnabled(true); // enable data ready interrupt
 }
 
-void loop() {
+void loop(MPU6050 mpu) {
   if (mpu.getIntDataReadyStatus() ==
       1) { // wait for data ready status register to update all data registers
     mcount++;
