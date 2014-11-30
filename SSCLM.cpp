@@ -323,9 +323,9 @@ void setServo(SERVO servoNum, int position) {
 
 #include <wiringPi.h> //???
 
-#define BUTTON1		0 // WiringPi pin number
-#define BUTTON2		1 // WiringPi pin number
-#define BUTTON3		2 // WiringPi pin number
+#define BUTTON1		2 // WiringPi pin number
+#define BUTTON2		3 // WiringPi pin number
+#define BUTTON3		4 // WiringPi pin number
 
 void buttons() { 
 
