@@ -30,7 +30,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 typedef int SERVO;
 void setServo(SERVO servoNum, int position);
-float *crossProduct(float a[], float b[]);
+void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -263,7 +263,9 @@ norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
   mx.z *= norm;
 
     VectorFloat p;
-    p = crossProduct(mx, gravity);
+    crossProduct(&p, &mx, &gravity);
+    crossProduct(&mx, &p, &gravity);
+      printf(" %F, %F, %F\n", p.x, p.y, p.z );
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -398,13 +400,10 @@ void buttons() {
   }
 }
 
-VecotrFloat *crossProduct(VectorFloat *a, VectorFloat *b) {
-  VectorFloat product;
-  product.x = a->y * b->z - a->z * b->y;
-  product.y = a->z * b->x - a->x * b->z;
-  product.z = a->x * b->y - a->y * b->x;
+void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
 
-  printf(" %F, %F, %F\n", product.x, product.y, product.z );
+  product->x = a->y * b->z - a->z * b->y;
+  product->y = a->z * b->x - a->x * b->z;
+  product->z = a->x * b->y - a->y * b->x;
 
-  return product;
 }
