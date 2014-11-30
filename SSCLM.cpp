@@ -30,6 +30,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 typedef int SERVO;
 void setServo(SERVO servoNum, int position);
+float *crossProduct(float a[], float b[]);
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -220,13 +221,49 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     mpu->dmpGetQuaternion(&q, fifoBuffer);
     mpu->dmpGetGravity(&gravity, &q);
     mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
-    
-    //@@!! gets mag vector still needs to be used to correct for drift
-    // may just need to project it onto the horizontal plane and use 
-    // that to determine the rotation about the Z axis. math is hard.
-    int16_t mx, my, mz;
-    mpu->getMag(&mx, &my, &mz);    
 
+    //@@!! gets mag vector still needs to be used to correct for drift
+    // may just need to project it onto the horizontal plane and use
+    // that to determine the rotation about the Z axis. math is hard.
+
+    // from the internet:
+    // The key is to use the cross product of the two vectors, gravity
+    // and magnetometer. The cross product gives a new vector
+    // perpendicular to them both. That means it is horizontal
+    // (perpendicular to down) and 90 degrees away from north. Now you
+    // have three orthogonal vectors which define orientation. It is a
+    // little ugly because they are not all perpendicular but that is
+    // easy to fix. If you then cross this new vector back with the
+    // gravity vector that gives a third vector perpendicular to the
+    // gravity vector and the magnet plane vector. Now you have three
+    // perpendicular vectors which defines your 3D orientation
+    // coordinate system. The original accelerometer (gravity) vector
+    // defines Z (up/down) and the two cross product vectors define
+    // the east/west and north/south components of the orientation.
+
+    int16_t m[3];
+    VectorFloat mx;
+    mpu->getMag(&m[0], &m[1], &m[2]);
+          mx.x = m[0] * 10.0f * 1229.0f / 4096.0f + 18.0f; // milliGauss (1229
+                                                   // microTesla per 2^12 bits,
+                                                   // 10 mG per microTesla)
+      mx.y = m[1] * 10.0f * 1229.0f / 4096.0f + 70.0f; // apply calibration offsets
+                                                   // in mG that correspond to
+                                                   // your environment and
+                                                   // magnetometer
+      mx.z= m[2] * 10.0f * 1229.0f / 4096.0f + 270.0f;
+  
+      float norm;
+norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
+  if (norm == 0.0f)
+    return; // handle NaN
+  norm = 1.0f / norm;
+  mx.x *= norm;
+  mx.y *= norm;
+  mx.z *= norm;
+
+    VectorFloat p;
+    p = crossProduct(mx, gravity);
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -260,9 +297,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   switch (deviceMode) {
   case MODE_CONTROLLABLE:
-    x=cx;
-    y=cy;
-    z=cz;
+    x = cx;
+    y = cy;
+    z = cz;
     break;
 
   case MODE_STABILIZE:
@@ -317,17 +354,17 @@ void setServo(SERVO servoNum, int position) {
   // */
 }
 
-// 3 buttons- 1 for each mode 
-// button push changes mode 
+// 3 buttons- 1 for each mode
+// button push changes mode
 // to be called in main method() ???
 
 #include <wiringPi.h> //???
 
-#define BUTTON1		2 // WiringPi pin number
-#define BUTTON2		3 // WiringPi pin number
-#define BUTTON3		4 // WiringPi pin number
+#define BUTTON1 2 // WiringPi pin number
+#define BUTTON2 3 // WiringPi pin number
+#define BUTTON3 4 // WiringPi pin number
 
-void buttons() { 
+void buttons() {
 
   // libraries - BCM or Wiring Pie
   // need to download WiringPi ???
@@ -335,32 +372,39 @@ void buttons() {
   // http://wiringpi.com/
   // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
 
-  pinMode (BUTTON1, INPUT);
-  pinMode (BUTTON2, INPUT); 
-  pinMode (BUTTON3, INPUT);  
+  pinMode(BUTTON1, INPUT);
+  pinMode(BUTTON2, INPUT);
+  pinMode(BUTTON3, INPUT);
 
   // mode 1- MODE_CONTROLLABLE
-  while (digitalRead (BUTTON1) == HIGH) {
-  	// if button1 pushed (and released) 
-  	deviceMode = MODE_CONTROLLABLE; 
-	printf ("Button 1 pushed\n") ;
+  while (digitalRead(BUTTON1) == HIGH) {
+    // if button1 pushed (and released)
+    deviceMode = MODE_CONTROLLABLE;
+    printf("Button 1 pushed\n");
   }
 
   // mode 2- MODE_STABILIZE
-  while (digitalRead (BUTTON2) == HIGH) {
-  	// if button2 pushed (and released)  
-  	deviceMode = MODE_STABILIZE; 
-	printf ("Button 2 pushed\n") ;
+  while (digitalRead(BUTTON2) == HIGH) {
+    // if button2 pushed (and released)
+    deviceMode = MODE_STABILIZE;
+    printf("Button 2 pushed\n");
   }
-
 
   // mode 3- MODE_COMBINED
-  while (digitalRead (BUTTON3) == HIGH) {
-  	// if button3 pushed (and released)  
-  	deviceMode = MODE_COMBINED; 
-	printf ("Button 3 pushed\n") ;
+  while (digitalRead(BUTTON3) == HIGH) {
+    // if button3 pushed (and released)
+    deviceMode = MODE_COMBINED;
+    printf("Button 3 pushed\n");
   }
+}
 
-	
-} 
+VecotrFloat *crossProduct(VectorFloat *a, VectorFloat *b) {
+  VectorFloat product;
+  product.x = a->y * b->z - a->z * b->y;
+  product.y = a->z * b->x - a->x * b->z;
+  product.z = a->x * b->y - a->y * b->x;
 
+  printf(" %F, %F, %F\n", product.x, product.y, product.z );
+
+  return product;
+}
