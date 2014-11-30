@@ -42,6 +42,14 @@ THE SOFTWARE.
 
 #define pgm_read_byte(p) (*(uint8_t *)(p))
 
+#define MPU9150_RA_MAG_ADDRESS		0x0C
+#define MPU9150_RA_MAG_XOUT_L		0x03
+#define MPU9150_RA_MAG_XOUT_H		0x04
+#define MPU9150_RA_MAG_YOUT_L		0x05
+#define MPU9150_RA_MAG_YOUT_H		0x06
+#define MPU9150_RA_MAG_ZOUT_L		0x07
+#define MPU9150_RA_MAG_ZOUT_H		0x08
+
 
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
@@ -583,6 +591,9 @@ class MPU6050 {
         int16_t getAccelerationX();
         int16_t getAccelerationY();
         int16_t getAccelerationZ();
+
+	// MAG_*OUT_* registers
+        void getMag(int16_t* x, int16_t* y, int16_t* z);	
 
         // TEMP_OUT_* registers
         int16_t getTemperature();
