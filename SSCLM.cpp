@@ -78,7 +78,7 @@ float
 /* Pulse period in msec */
 #define PER (1.0E3 / FRQ)
 
-#define SERVO_MIN 15
+#define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
 
 SERVO servos[3] = {0, 1, 2};
@@ -129,11 +129,11 @@ int main() {
   usleep(100000);
   initMPU(baseMPU);
   usleep(100000);
-  lockPosition.x = 90;
-  lockPosition.y = 90;
-  lockPosition.z = 90;
+  lockPosition.x = 50;
+  lockPosition.y = 50;
+  lockPosition.z = 50;
 
-  deviceMode = MODE_COMBINED;
+  deviceMode = MODE_CONTROLLABLE;
   // opens file that controls servo motors
   servoDriverFile.open("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
@@ -220,6 +220,13 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     mpu->dmpGetQuaternion(&q, fifoBuffer);
     mpu->dmpGetGravity(&gravity, &q);
     mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+    
+    //@@!! gets mag vector still needs to be used to correct for drift
+    // may just need to project it onto the horizontal plane and use 
+    // that to determine the rotation about the Z axis. math is hard.
+    int16_t mx, my, mz;
+    mpu->getMag(&mx, &my, &mz);    
+
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -253,7 +260,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   switch (deviceMode) {
   case MODE_CONTROLLABLE:
-    // simply sets according to controller
+    x=cx;
+    y=cy;
+    z=cz;
     break;
 
   case MODE_STABILIZE:
