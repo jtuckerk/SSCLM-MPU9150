@@ -317,20 +317,50 @@ void setServo(SERVO servoNum, int position) {
   // */
 }
 
-// 3 buttons- 1 for each mode ?
-void buttons() {
+// 3 buttons- 1 for each mode 
+// button push changes mode 
+// to be called in main method() ???
 
-  // mode 1- MODE_CONTROLLABLE
-  // if button1 pushed (and released)
-  // deviceMode = MODE_CONTROLLABLE;
+#include <wiringPi.h> //???
 
-  // mode 2- MODE_STABILIZE
-  // if button2 pushed (and released)
-  // deviceMode = MODE_STABILIZE;
+#define BUTTON1		0 // WiringPi pin number
+#define BUTTON2		1 // WiringPi pin number
+#define BUTTON3		2 // WiringPi pin number
 
-  // mode 3- MODE_COMBINED
-  // if button3 pushed (and released)
-  // deviceMode = MODE_COMBINED;
+void buttons() { 
 
   // libraries - BCM or Wiring Pie
-}
+  // need to download WiringPi ???
+  // not sure what all we can use
+  // http://wiringpi.com/
+  // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
+
+  pinMode (BUTTON1, INPUT);
+  pinMode (BUTTON2, INPUT); 
+  pinMode (BUTTON3, INPUT);  
+
+  // mode 1- MODE_CONTROLLABLE
+  while (digitalRead (BUTTON1) == HIGH) {
+  	// if button1 pushed (and released) 
+  	deviceMode = MODE_CONTROLLABLE; 
+	printf ("Button 1 pushed\n") ;
+  }
+
+  // mode 2- MODE_STABILIZE
+  while (digitalRead (BUTTON2) == HIGH) {
+  	// if button2 pushed (and released)  
+  	deviceMode = MODE_STABILIZE; 
+	printf ("Button 2 pushed\n") ;
+  }
+
+
+  // mode 3- MODE_COMBINED
+  while (digitalRead (BUTTON3) == HIGH) {
+  	// if button3 pushed (and released)  
+  	deviceMode = MODE_COMBINED; 
+	printf ("Button 3 pushed\n") ;
+  }
+
+	
+} 
+
