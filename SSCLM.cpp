@@ -153,6 +153,10 @@ int main() {
   pthread_create(&thread2, &myattr, thread2function, (void *)0);
   pthread_attr_destroy(&myattr);
 
+  // call button method 
+  // continuously checks for mode changes 
+  buttons();  
+
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
   return 0;
@@ -358,7 +362,7 @@ void setServo(SERVO servoNum, int position) {
 
 // 3 buttons- 1 for each mode
 // button push changes mode
-// to be called in main method() ???
+// called in main method()
 
 #include <wiringPi.h> //???
 
@@ -378,26 +382,40 @@ void buttons() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
+  int count = 0; 
+
+  while (count < 10) {
+    // have 10 total mode changes available 
+    // can also change to exit when all 3 pushed at once - testing needed 
+
+    usleep(100); // need to test to find correct number 
+
   // mode 1- MODE_CONTROLLABLE
-  while (digitalRead(BUTTON1) == HIGH) {
+  if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
+    count ++; 
   }
 
   // mode 2- MODE_STABILIZE
-  while (digitalRead(BUTTON2) == HIGH) {
+  if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
+    count ++; 
   }
 
   // mode 3- MODE_COMBINED
-  while (digitalRead(BUTTON3) == HIGH) {
+  if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
+    count ++; 
   }
+
+  } 
+
 }
 
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
