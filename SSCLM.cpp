@@ -269,7 +269,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
                                                    // magnetometer
     //mx.z= m[2] * 10.0f * 1229.0f / 4096.0f;
     mx.z= m[2];
-    magHeading(mpu, &m);
+    magHeading(mpu, m);
       std::cout<< "x y z: " <<mx.x<<" "<<mx.y<<" "<<mx.z<<std::endl;
       float norm;
       norm = sqrt(mx.x * mx.x + mx.y * mx.y);
@@ -467,7 +467,7 @@ int heading(VectorFloat *mag){
   degrees += atan(y/x)/(PI/180);
   return degrees;
 }
-void magHeading(MPU6050 *mpu, int16_t *m){
+void magHeading(MPU6050 *mpu, int16_t m[]){
   int8_t *adj;
   if(mpu->devaddr == 0x68)
     adj = contMagSen;
