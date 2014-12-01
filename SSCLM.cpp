@@ -265,7 +265,7 @@ norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
     VectorFloat p;
     crossProduct(&p, &mx, &gravity);
     crossProduct(&mx, &p, &gravity);
-      printf(" %F, %F, %F\n", p.x, p.y, p.z );
+      printf(" %F, %F, %F\n", mx.x, mx.y, mx.z );
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
