@@ -91,7 +91,7 @@ float
 
 #define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
-
+#define PI 3.14159
 SERVO servos[3] = {0, 1, 2};
 
 pthread_mutex_t servoPosMutex;
@@ -427,8 +427,8 @@ void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
 }
 int heading(VectorFloat *mag){
 
-  float x = mag.x;
-  float y = mag.y;
+  float x = mag->x;
+  float y = mag->y;
 
   int degrees=0;
   if (x==0 && y==0)
@@ -442,5 +442,5 @@ int heading(VectorFloat *mag){
   }
 
   degrees += atan(y/x)/(PI/180);
-  return degrees
+  return degrees;
 }
