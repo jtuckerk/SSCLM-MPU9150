@@ -269,7 +269,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
                                                    // magnetometer
     //mx.z= m[2] * 10.0f * 1229.0f / 4096.0f;
     mx.z= m[2];
-    magHeading(mpu, m);
+    magHeading(mpu, &m);
       std::cout<< "x y z: " <<mx.x<<" "<<mx.y<<" "<<mx.z<<std::endl;
       float norm;
       norm = sqrt(mx.x * mx.x + mx.y * mx.y);
