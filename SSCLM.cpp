@@ -42,6 +42,7 @@ void lights();
 // change in the current position - not an absolute value
 struct XYZposition servoPositions;
 
+// Stores the position for the arm to maintain during stabilize and combined modes
 struct XYZposition lockPosition;
 
 //set to true if the position expected is not achievable by the
@@ -49,7 +50,7 @@ struct XYZposition lockPosition;
 bool XinBounds = true;
 bool YinBounds = true;
 bool ZinBounds = true;
- 
+
 // need to change address of one or both MPUs
 // they will both have default address out of the box
 // changing them once should be saved on the device
@@ -163,9 +164,9 @@ int main() {
   pthread_create(&thread2, &myattr, thread2function, (void *)0);
   pthread_attr_destroy(&myattr);
 
-  // call button method 
-  // continuously checks for mode changes 
-  buttons();  
+  // call button method
+  // continuously checks for mode changes
+  buttons();
   lights();
 
   pthread_join(thread1, 0);
@@ -252,7 +253,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
                                                    // your environment and
                                                    // magnetometer
       mx.z= m[2] * 10.0f * 1229.0f / 4096.0f + 270.0f;
-  
+
       float norm;
       norm = sqrt(mx.x * mx.x + mx.y * mx.y);
   if (norm == 0.0f)
@@ -297,9 +298,11 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   switch (deviceMode) {
   case MODE_CONTROLLABLE:
+
     x = cx;
     y = cy;
     z = cz;
+
     break;
 
   case MODE_STABILIZE:
@@ -311,11 +314,13 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
 
   case MODE_COMBINED:
+
     x = (2 * cx) - bx; // cx - (bx - cx)
     y = (2 * cy) - by;
     z = (2 * cz) - bz;
 
     break;
+
   default:
     x = 50;
     y = 50;
@@ -374,20 +379,20 @@ void buttons() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
-  int count = 0; 
+  int count = 0;
 
   while (count < 10) {
-    // have 10 total mode changes available 
-    // can also change to exit when all 3 pushed at once - testing needed 
+    // have 10 total mode changes available
+    // can also change to exit when all 3 pushed at once - testing needed
 
-    usleep(10000); // need to test to find correct number 
+    usleep(10000); // need to test to find correct number
 
   // mode 1- MODE_CONTROLLABLE
   if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
-    count++; 
+    count++;
   }
 
   // mode 2- MODE_STABILIZE
@@ -395,7 +400,7 @@ void buttons() {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
-    count++; 
+    count++;
   }
 
   // mode 3- MODE_COMBINED
@@ -403,10 +408,10 @@ void buttons() {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
-    count++; 
+    count++;
   }
 
-  } 
+  }
 
 }
 
