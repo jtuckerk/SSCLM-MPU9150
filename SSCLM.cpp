@@ -272,11 +272,11 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
 }
 
 bool boundServo(int *pos) {
-  if (pos > SERVO_MAX) {
-    pos = SERVO_MAX;
+  if (*pos > SERVO_MAX) {
+    *pos = SERVO_MAX;
     return false;
-  } else if (pos < SERVO_MIN) {
-    pos = SERVO_MIN;
+  } else if (*pos < SERVO_MIN) {
+    *pos = SERVO_MIN;
     return false;
   } else {
     return true;
@@ -323,9 +323,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
   }
 
-  XinBounds = boundServo(x);
-  YinBounds = boundServo(y);
-  ZinBounds = boundServo(z);
+  XinBounds = boundServo(&x);
+  YinBounds = boundServo(&y);
+  ZinBounds = boundServo(&z);
   std::cout << bx << " " << by << " " << bz;
   std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
