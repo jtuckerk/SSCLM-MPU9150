@@ -412,6 +412,7 @@ class MPU6050 {
         MPU6050();
         MPU6050(uint8_t address);
 
+	uint8_t devAddr;
         void initialize();
         bool testConnection();
 
@@ -594,7 +595,7 @@ class MPU6050 {
 
 	// MAG_*OUT_* registers
         void getMag(int16_t* x, int16_t* y, int16_t* z);	
-
+	void getMagSensitivity(int8_t* x, int8_t* y, int8_t* z);	
         // TEMP_OUT_* registers
         int16_t getTemperature();
 
@@ -992,7 +993,7 @@ class MPU6050 {
         #endif
 
     private:
-        uint8_t devAddr;
+
         uint8_t buffer[14];
 };
 

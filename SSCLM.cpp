@@ -12,7 +12,7 @@
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
-#include <wiringPi.h> //???
+#include <wiringPi.h> 
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -33,6 +33,7 @@ typedef int SERVO;
 void setServo(SERVO servoNum, int position);
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
 int heading(VectorFloat *mag);
+void magHeading(MPU6050 *mpu, int16_t m);
 void buttons();
 void lights();
 
@@ -50,6 +51,11 @@ struct XYZposition lockPosition;
 bool XinBounds = true;
 bool YinBounds = true;
 bool ZinBounds = true;
+
+
+//magnetometer sensitivity values
+int8_t baseMagSen[3];
+int8_t contMagSen[3];
 
 // need to change address of one or both MPUs
 // they will both have default address out of the box
@@ -214,6 +220,13 @@ void initMPU(MPU6050 mpu) {
     // (if it's going to break, usually the code will be 1)
     printf("DMP Initialization failed (code %d)\n", devStatus);
   }
+  if(mpu.devAddr ==0x68)
+    {
+      getMagSensitivity(&baseMagSen[0],&baseMagSen[1],&baseMagSen[2]);
+    }
+  else{
+    getMagSensitivity(&contMagSen[0],&contMagSen[1],&contMagSen[2]);
+  }
 }
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   // if programming failed, don't try to do anything
@@ -245,15 +258,19 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     int16_t m[3];
     VectorFloat mx;
     mpu->getMag(&m[0], &m[1], &m[2]);
-          mx.x = m[0] * 10.0f * 1229.0f / 4096.0f + 18.0f; // milliGauss (1229
+    mx.x = m[0];
+    //mx.x = m[0] * 10.0f * 1229.0f / 4096.0f ;
                                                    // microTesla per 2^12 bits,
                                                    // 10 mG per microTesla)
-      mx.y = m[1] * 10.0f * 1229.0f / 4096.0f + 70.0f; // apply calibration offsets
+    //mx.y = m[1] * 10.0f * 1229.0f / 4096.0f;
+    mx.y = m[1];
                                                    // in mG that correspond to
                                                    // your environment and
                                                    // magnetometer
-      mx.z= m[2] * 10.0f * 1229.0f / 4096.0f + 270.0f;
-
+    //mx.z= m[2] * 10.0f * 1229.0f / 4096.0f;
+    mx.z= m[2];
+    magHeading(mpu, m);
+      std::cout<< "x y z: " <<mx.x<<" "<<mx.y<<" "<<mx.z<<std::endl;
       float norm;
       norm = sqrt(mx.x * mx.x + mx.y * mx.y);
   if (norm == 0.0f)
@@ -262,7 +279,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   mx.x *= norm;
   mx.y *= norm;
 
-  std::cout<<"heading: "<<heading(&mx)<<std::endl;
+  //  std::cout<<"heading: "<<heading(&mx)<<std::endl;
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -331,8 +348,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   XinBounds = boundServo(&x);
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
-  std::cout << bx << " " << by << " " << bz;
-  std::cout << " " << x << " " << y << " " << z << " " << std::endl;
+  //std::cout << bx << " " << by << " " << bz;
+  //std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
   x = (int)(x / 1.8);
   y = (int)(y / 1.8);
@@ -448,4 +465,15 @@ int heading(VectorFloat *mag){
 
   degrees += atan(y/x)/(PI/180);
   return degrees;
+}
+void magHeading(MPU6050 *mpu, int16_t m){
+  int8_t *adj;
+  if(mpu->devaddr == 0x68)
+    adj = contMagSen;
+  else
+    adj = baseMagSen;
+
+  m[0]=  m[0]*((adj[0]-128)/256+1);
+  m[1]=  m[1]*((adj[1]-128)/256+1);
+  m[2]=  m[2]*((adj[2]-128)/256+1);
 }
