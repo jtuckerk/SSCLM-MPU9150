@@ -380,7 +380,7 @@ void buttons() {
     // have 10 total mode changes available 
     // can also change to exit when all 3 pushed at once - testing needed 
 
-    usleep(100); // need to test to find correct number 
+    usleep(10000); // need to test to find correct number 
 
   // mode 1- MODE_CONTROLLABLE
   if (digitalRead(BUTTON1) == HIGH) {
