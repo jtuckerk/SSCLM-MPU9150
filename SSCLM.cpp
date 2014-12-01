@@ -411,6 +411,7 @@ void buttons() {
   } 
 
 }
+
 //lights up lights when servo is expected to do something it cannot do
 void lights(){
   if (!XinBounds || !YinBounds || !ZinBounds){
@@ -425,6 +426,7 @@ void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
   product->z = a->x * b->y - a->y * b->x;
 
 }
+
 int heading(VectorFloat *mag){
 
   float x = mag.x;
