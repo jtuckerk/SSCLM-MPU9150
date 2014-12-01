@@ -30,7 +30,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 typedef int SERVO;
 void setServo(SERVO servoNum, int position);
-float *crossProduct(float a[], float b[]);
+void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -153,6 +153,10 @@ int main() {
   pthread_create(&thread2, &myattr, thread2function, (void *)0);
   pthread_attr_destroy(&myattr);
 
+  // call button method 
+  // continuously checks for mode changes 
+  buttons();  
+
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
   return 0;
@@ -247,7 +251,9 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   mx.y *= norm;
 
     VectorFloat p;
-    p = crossProduct(mx, gravity);
+    crossProduct(&p, &mx, &gravity);
+    crossProduct(&mx, &p, &gravity);
+      printf(" %F, %F, %F\n", p.x, p.y, p.z );
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -340,7 +346,7 @@ void setServo(SERVO servoNum, int position) {
 
 // 3 buttons- 1 for each mode
 // button push changes mode
-// to be called in main method() ???
+// called in main method()
 
 #include <wiringPi.h> //???
 
@@ -360,37 +366,48 @@ void buttons() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
+  int count = 0; 
+
+  while (count < 10) {
+    // have 10 total mode changes available 
+    // can also change to exit when all 3 pushed at once - testing needed 
+
+    usleep(100); // need to test to find correct number 
+
   // mode 1- MODE_CONTROLLABLE
-  while (digitalRead(BUTTON1) == HIGH) {
+  if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
+    count ++; 
   }
 
   // mode 2- MODE_STABILIZE
-  while (digitalRead(BUTTON2) == HIGH) {
+  if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
+    count ++; 
   }
 
   // mode 3- MODE_COMBINED
-  while (digitalRead(BUTTON3) == HIGH) {
+  if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
+    count ++; 
   }
+
+  } 
+
 }
 
-VecotrFloat *crossProduct(VectorFloat *a, VectorFloat *b) {
-  VectorFloat product;
-  product.x = a->y * b->z - a->z * b->y;
-  product.y = a->z * b->x - a->x * b->z;
-  product.z = a->x * b->y - a->y * b->x;
+void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
 
-  printf(" %F, %F, %F\n", product.x, product.y, product.z );
+  product->x = a->y * b->z - a->z * b->y;
+  product->y = a->z * b->x - a->x * b->z;
+  product->z = a->x * b->y - a->y * b->x;
 
-  return product;
 }
 int heading(VectorFloat *mag){
 
