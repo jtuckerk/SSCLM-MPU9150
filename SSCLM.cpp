@@ -12,7 +12,7 @@
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
-#include <wiringPi.h> 
+#include <wiringPi.h>
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -435,6 +435,7 @@ void buttons() {
 //lights up lights when servo is expected to do something it cannot do
 void lights(){
   if (!XinBounds || !YinBounds || !ZinBounds){
+    printf("*****OUT OF BOUNDS*****\n");
     //make a light light up or 3?
   }
 }

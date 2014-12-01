@@ -78,8 +78,8 @@ void MPU6050::initialize() {
  * @return True if connection is valid, false otherwise
  */
 bool MPU6050::testConnection() {
-  //@@ debugging double connection problems                                          
-    printf("device ID = %d\n", getDeviceID()); 
+  //@@ debugging double connection problems
+    printf("device ID = %d\n", getDeviceID());
     return getDeviceID() == 0x34;
 }
 
@@ -870,7 +870,7 @@ void MPU6050::setMasterClockSpeed(uint8_t speed) {
  * operation, and if it is cleared, then it's a write operation. The remaining
  * bits (6-0) are the 7-bit device address of the slave device.
  *
- * In read mode, the result of the read is placed in the lowest available 
+ * In read mode, the result of the read is placed in the lowest available
  * EXT_SENS_DATA register. For further information regarding the allocation of
  * read results, please refer to the EXT_SENS_DATA register description
  * (Registers 73 - 96).
@@ -1820,31 +1820,31 @@ int16_t MPU6050::getAccelerationZ() {
 
 
 void MPU6050::getMag(int16_t* mx, int16_t* my, int16_t* mz) {
-    
+
   //read mag
   I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
-  
+
   usleep(10000);
   I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
   usleep(10000);
   I2Cdev::readBytes(MPU9150_RA_MAG_ADDRESS, MPU9150_RA_MAG_XOUT_L, 6, buffer);
   *mx = (((int16_t)buffer[1]) << 8) | buffer[0];
   *my = (((int16_t)buffer[3]) << 8) | buffer[2];
-  *mz = (((int16_t)buffer[5]) << 8) | buffer[4];		
+  *mz = (((int16_t)buffer[5]) << 8) | buffer[4];
   setI2CBypassEnabled(false);
 }
 void MPU6050::getMagSensitivity(int8_t* mx, int8_t* my, int8_t* mz) {
-    
+
   //read mag
   I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
-  
+
   usleep(10000);
   I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
   usleep(10000);
   I2Cdev::readBytes(MPU9150_RA_MAG_ADDRESS, 0x10, 3, buffer);
   *mx = (int8_t) buffer[0];
-  *my = (int8_t)buffer[1];
-  *mz = (int8_t)buffer[2];
+  *my = (int8_t) buffer[1];
+  *mz = (int8_t) buffer[2];
   setI2CBypassEnabled(false);
 }
 
@@ -2986,7 +2986,7 @@ void MPU6050::readMemoryBlock(uint8_t *data, uint16_t dataSize, uint8_t bank, ui
 
         // read the chunk of data as specified
         I2Cdev::readBytes(devAddr, MPU6050_RA_MEM_R_W, chunkSize, data + i);
-        
+
         // increase byte index by [chunkSize]
         i += chunkSize;
 
@@ -3020,7 +3020,7 @@ bool MPU6050::writeMemoryBlock(const uint8_t *data, uint16_t dataSize, uint8_t b
 
         // make sure this chunk doesn't go past the bank boundary (256 bytes)
         if (chunkSize > 256 - address) chunkSize = 256 - address;
-        
+
         if (useProgMem) {
             // write the chunk of data as specified
             for (j = 0; j < chunkSize; j++) progBuffer[j] = pgm_read_byte(data + i + j);
@@ -3134,7 +3134,7 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
             Serial.println(" found...");*/
             if (special == 0x01) {
                 // enable DMP-related interrupts
-                
+
                 //setIntZeroMotionEnabled(true);
                 //setIntFIFOBufferOverflowEnabled(true);
                 //setIntDMPEnabled(true);
@@ -3146,7 +3146,7 @@ bool MPU6050::writeDMPConfigurationSet(const uint8_t *data, uint16_t dataSize, b
                 success = false;
             }
         }
-        
+
         if (!success) {
             if (useProgMem) free(progBuffer);
             return false; // uh oh
