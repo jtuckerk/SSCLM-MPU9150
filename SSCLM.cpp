@@ -226,21 +226,6 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     // may just need to project it onto the horizontal plane and use
     // that to determine the rotation about the Z axis. math is hard.
 
-    // from the internet:
-    // The key is to use the cross product of the two vectors, gravity
-    // and magnetometer. The cross product gives a new vector
-    // perpendicular to them both. That means it is horizontal
-    // (perpendicular to down) and 90 degrees away from north. Now you
-    // have three orthogonal vectors which define orientation. It is a
-    // little ugly because they are not all perpendicular but that is
-    // easy to fix. If you then cross this new vector back with the
-    // gravity vector that gives a third vector perpendicular to the
-    // gravity vector and the magnet plane vector. Now you have three
-    // perpendicular vectors which defines your 3D orientation
-    // coordinate system. The original accelerometer (gravity) vector
-    // defines Z (up/down) and the two cross product vectors define
-    // the east/west and north/south components of the orientation.
-
     int16_t m[3];
     VectorFloat mx;
     mpu->getMag(&m[0], &m[1], &m[2]);
@@ -254,13 +239,12 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
       mx.z= m[2] * 10.0f * 1229.0f / 4096.0f + 270.0f;
   
       float norm;
-norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
+      norm = sqrt(mx.x * mx.x + mx.y * mx.y);
   if (norm == 0.0f)
     return; // handle NaN
   norm = 1.0f / norm;
   mx.x *= norm;
   mx.y *= norm;
-  mx.z *= norm;
 
     VectorFloat p;
     p = crossProduct(mx, gravity);
@@ -407,4 +391,23 @@ VecotrFloat *crossProduct(VectorFloat *a, VectorFloat *b) {
   printf(" %F, %F, %F\n", product.x, product.y, product.z );
 
   return product;
+}
+int heading(VectorFloat *mag){
+
+  float x = mag.x;
+  float y = mag.y;
+
+  int degrees=0;
+  if (x==0 && y==0)
+    return 0;
+
+ if (x<0){
+    degrees =180;
+  }
+  else if (y<0){
+    degrees = 360;
+  }
+
+  degrees += atan(y/x)/(PI/180);
+  return degrees
 }
