@@ -467,7 +467,7 @@ int heading(VectorFloat *mag){
   degrees += atan(y/x)/(PI/180);
   return degrees;
 }
-void magHeading(MPU6050 *mpu, int16_t m){
+void magHeading(MPU6050 *mpu, int16_t *m){
   int8_t *adj;
   if(mpu->devaddr == 0x68)
     adj = contMagSen;
