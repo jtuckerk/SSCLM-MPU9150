@@ -261,9 +261,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   mx.x *= norm;
   mx.y *= norm;
 
-
   std::cout<<"heading: "<<heading(&mx)<<std::endl;
-
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -389,7 +387,7 @@ void buttons() {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
-    count ++; 
+    count++; 
   }
 
   // mode 2- MODE_STABILIZE
@@ -397,7 +395,7 @@ void buttons() {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
-    count ++; 
+    count++; 
   }
 
   // mode 3- MODE_COMBINED
@@ -405,7 +403,7 @@ void buttons() {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
-    count ++; 
+    count++; 
   }
 
   } 
