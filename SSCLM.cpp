@@ -12,6 +12,7 @@
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
+#include <wiringPi.h> //???
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -31,6 +32,8 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 typedef int SERVO;
 void setServo(SERVO servoNum, int position);
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
+int heading(VectorFloat *mag);
+void buttons();
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -250,10 +253,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   mx.x *= norm;
   mx.y *= norm;
 
-    VectorFloat p;
-    crossProduct(&p, &mx, &gravity);
-    crossProduct(&mx, &p, &gravity);
-      printf(" %F, %F, %F\n", p.x, p.y, p.z );
+  std::cout<<"heading: "<<heading(&mx)<<std::endl;
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -347,8 +347,6 @@ void setServo(SERVO servoNum, int position) {
 // 3 buttons- 1 for each mode
 // button push changes mode
 // called in main method()
-
-#include <wiringPi.h> //???
 
 #define BUTTON1 2 // WiringPi pin number
 #define BUTTON2 3 // WiringPi pin number
