@@ -34,6 +34,7 @@ void setServo(SERVO servoNum, int position);
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
 int heading(VectorFloat *mag);
 void buttons();
+void lights();
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -43,6 +44,12 @@ struct XYZposition servoPositions;
 
 struct XYZposition lockPosition;
 
+//set to true if the position expected is not achievable by the
+//servos
+bool XinBounds = true;
+bool YinBounds = true;
+bool ZinBounds = true;
+ 
 // need to change address of one or both MPUs
 // they will both have default address out of the box
 // changing them once should be saved on the device
@@ -159,6 +166,7 @@ int main() {
   // call button method 
   // continuously checks for mode changes 
   buttons();  
+  lights();
 
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
@@ -263,13 +271,15 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   }
 }
 
-int boundServo(int pos) {
+bool boundServo(int *pos) {
   if (pos > SERVO_MAX) {
-    return SERVO_MAX;
+    pos = SERVO_MAX;
+    return false;
   } else if (pos < SERVO_MIN) {
-    return SERVO_MIN;
+    pos = SERVO_MIN;
+    return false;
   } else {
-    return pos;
+    return true;
   }
 }
 
@@ -313,9 +323,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
   }
 
-  x = boundServo(x);
-  y = boundServo(y);
-  z = boundServo(z);
+  XinBounds = boundServo(x);
+  YinBounds = boundServo(y);
+  ZinBounds = boundServo(z);
   std::cout << bx << " " << by << " " << bz;
   std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
@@ -398,6 +408,12 @@ void buttons() {
 
   } 
 
+}
+//lights up lights when servo is expected to do something it cannot do
+void lights(){
+  if (!XinBounds || !YinBounds || !ZinBounds){
+    //make a light light up or 3?
+  }
 }
 
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
