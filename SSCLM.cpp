@@ -12,6 +12,7 @@
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
+#include <wiringPi.h> //???
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -31,6 +32,9 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 typedef int SERVO;
 void setServo(SERVO servoNum, int position);
 void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b);
+int heading(VectorFloat *mag);
+void buttons();
+void lights();
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -40,6 +44,12 @@ struct XYZposition servoPositions;
 
 struct XYZposition lockPosition;
 
+//set to true if the position expected is not achievable by the
+//servos
+bool XinBounds = true;
+bool YinBounds = true;
+bool ZinBounds = true;
+ 
 // need to change address of one or both MPUs
 // they will both have default address out of the box
 // changing them once should be saved on the device
@@ -153,6 +163,11 @@ int main() {
   pthread_create(&thread2, &myattr, thread2function, (void *)0);
   pthread_attr_destroy(&myattr);
 
+  // call button method 
+  // continuously checks for mode changes 
+  buttons();  
+  lights();
+
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
   return 0;
@@ -226,21 +241,6 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     // may just need to project it onto the horizontal plane and use
     // that to determine the rotation about the Z axis. math is hard.
 
-    // from the internet:
-    // The key is to use the cross product of the two vectors, gravity
-    // and magnetometer. The cross product gives a new vector
-    // perpendicular to them both. That means it is horizontal
-    // (perpendicular to down) and 90 degrees away from north. Now you
-    // have three orthogonal vectors which define orientation. It is a
-    // little ugly because they are not all perpendicular but that is
-    // easy to fix. If you then cross this new vector back with the
-    // gravity vector that gives a third vector perpendicular to the
-    // gravity vector and the magnet plane vector. Now you have three
-    // perpendicular vectors which defines your 3D orientation
-    // coordinate system. The original accelerometer (gravity) vector
-    // defines Z (up/down) and the two cross product vectors define
-    // the east/west and north/south components of the orientation.
-
     int16_t m[3];
     VectorFloat mx;
     mpu->getMag(&m[0], &m[1], &m[2]);
@@ -254,18 +254,16 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
       mx.z= m[2] * 10.0f * 1229.0f / 4096.0f + 270.0f;
   
       float norm;
-norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
+      norm = sqrt(mx.x * mx.x + mx.y * mx.y);
   if (norm == 0.0f)
     return; // handle NaN
   norm = 1.0f / norm;
   mx.x *= norm;
   mx.y *= norm;
-  mx.z *= norm;
 
-    VectorFloat p;
-    crossProduct(&p, &mx, &gravity);
-    crossProduct(&mx, &p, &gravity);
-      printf(" %F, %F, %F\n", mx.x, mx.y, mx.z );
+
+  std::cout<<"heading: "<<heading(&mx)<<std::endl;
+
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -275,13 +273,15 @@ norm = sqrt(mx.x * mx.x + mx.y * mx.y + mx.z * mx.z);
   }
 }
 
-int boundServo(int pos) {
+bool boundServo(int *pos) {
   if (pos > SERVO_MAX) {
-    return SERVO_MAX;
+    pos = SERVO_MAX;
+    return false;
   } else if (pos < SERVO_MIN) {
-    return SERVO_MIN;
+    pos = SERVO_MIN;
+    return false;
   } else {
-    return pos;
+    return true;
   }
 }
 
@@ -325,9 +325,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
   }
 
-  x = boundServo(x);
-  y = boundServo(y);
-  z = boundServo(z);
+  XinBounds = boundServo(x);
+  YinBounds = boundServo(y);
+  ZinBounds = boundServo(z);
   std::cout << bx << " " << by << " " << bz;
   std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
@@ -358,9 +358,7 @@ void setServo(SERVO servoNum, int position) {
 
 // 3 buttons- 1 for each mode
 // button push changes mode
-// to be called in main method() ???
-
-#include <wiringPi.h> //???
+// called in main method()
 
 #define BUTTON1 2 // WiringPi pin number
 #define BUTTON2 3 // WiringPi pin number
@@ -378,25 +376,45 @@ void buttons() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
+  int count = 0; 
+
+  while (count < 10) {
+    // have 10 total mode changes available 
+    // can also change to exit when all 3 pushed at once - testing needed 
+
+    usleep(100); // need to test to find correct number 
+
   // mode 1- MODE_CONTROLLABLE
-  while (digitalRead(BUTTON1) == HIGH) {
+  if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
+    count ++; 
   }
 
   // mode 2- MODE_STABILIZE
-  while (digitalRead(BUTTON2) == HIGH) {
+  if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
+    count ++; 
   }
 
   // mode 3- MODE_COMBINED
-  while (digitalRead(BUTTON3) == HIGH) {
+  if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
+    count ++; 
+  }
+
+  } 
+
+}
+//lights up lights when servo is expected to do something it cannot do
+void lights(){
+  if (!XinBounds || !YinBounds || !ZinBounds){
+    //make a light light up or 3?
   }
 }
 
@@ -406,4 +424,23 @@ void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
   product->y = a->z * b->x - a->x * b->z;
   product->z = a->x * b->y - a->y * b->x;
 
+}
+int heading(VectorFloat *mag){
+
+  float x = mag.x;
+  float y = mag.y;
+
+  int degrees=0;
+  if (x==0 && y==0)
+    return 0;
+
+ if (x<0){
+    degrees =180;
+  }
+  else if (y<0){
+    degrees = 360;
+  }
+
+  degrees += atan(y/x)/(PI/180);
+  return degrees
 }
