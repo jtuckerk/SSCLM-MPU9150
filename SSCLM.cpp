@@ -261,9 +261,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   mx.x *= norm;
   mx.y *= norm;
 
-
   std::cout<<"heading: "<<heading(&mx)<<std::endl;
-
     //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
     //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
 
@@ -382,14 +380,14 @@ void buttons() {
     // have 10 total mode changes available 
     // can also change to exit when all 3 pushed at once - testing needed 
 
-    usleep(100); // need to test to find correct number 
+    usleep(10000); // need to test to find correct number 
 
   // mode 1- MODE_CONTROLLABLE
   if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
-    count ++; 
+    count++; 
   }
 
   // mode 2- MODE_STABILIZE
@@ -397,7 +395,7 @@ void buttons() {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
-    count ++; 
+    count++; 
   }
 
   // mode 3- MODE_COMBINED
@@ -405,12 +403,13 @@ void buttons() {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
-    count ++; 
+    count++; 
   }
 
   } 
 
 }
+
 //lights up lights when servo is expected to do something it cannot do
 void lights(){
   if (!XinBounds || !YinBounds || !ZinBounds){
@@ -425,6 +424,7 @@ void crossProduct(VectorFloat *product, VectorFloat *a, VectorFloat *b) {
   product->z = a->x * b->y - a->y * b->x;
 
 }
+
 int heading(VectorFloat *mag){
 
   float x = mag->x;
