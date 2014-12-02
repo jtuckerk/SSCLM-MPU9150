@@ -374,9 +374,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_STABILIZE:
 
-    x = (2 * lockPosition.x) - bx-baseOffset; // lockPosition.x - (bx - lockPosition.x)
-    y = (2 * lockPosition.y) - by;
-    z = 180-((2 * lockPosition.z) - bz);
+    x = 90 +(lockPosition.x - bx) -baseOffset; // lockPosition.x - (bx - lockPosition.x)
+    y = 90+(lockPosition.y - by);
+    z = 180-(90+( lockPosition.z - bz));
     //printf("MODE2: %d %d %d\n", x, y, z);
 
 
@@ -384,9 +384,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = (2*(cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
-    y = (2*cy) - by;
-    z = 180-((2*cz) - bz);
+    x = 90+((cx-controllerOffset)-bx)-baseOffset ;// + offset; // cx - (bx - cx)
+    y = 90+ (cy - by);
+    z = 180-(90+(cz - bz));
     //printf("MODE3: %d %d %d\n", x, y, z);
 
     break;
@@ -402,8 +402,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
   lights();
-  std::cout << bx << " " << by << " " << bz;
-  std::cout << " " << x << " " << y << " " << z << " " << std::endl;
+  std::cout <<"BASE: " << bx << " " << by << " " << bz << "\t";
+  std::cout <<"CONTROLLER: "<< cx << " " << cy << " " << cz << "\t";
+  std::cout <<"SERVO: "<< " " << x << " " << y << " " << z << " " << std::endl;
 
     pthread_mutex_lock(&servoPosMutex);
   servoPositions.x = x;
@@ -621,9 +622,9 @@ float waitStabalize(MPU6050 *mpu){
 	  printf("i: %d yaw %7.2f\n",i,ypr[0] * 180 / M_PI);
 	  i++;
 	  
-	  if(i==250)
+	  if(i==25)
 	    digitalWrite(LED, 0);
-	  if(i==750)
+	  if(i==75)
 	    digitalWrite(LED, 1);
 	  if(i==1){
 	    startyaw = 90+ypr[0] * 180 / M_PI;
