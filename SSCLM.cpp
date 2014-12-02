@@ -374,9 +374,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_STABILIZE:
 
-    x = (2 * lockPosition.x*1.8) - bx-baseOffset; // lockPosition.x - (bx - lockPosition.x)
-    y = (2 * lockPosition.y*1.8) - by;
-    z = 180-((2 * lockPosition.z*1.8) - bz);
+    x = (2 * lockPosition.x) - bx-baseOffset; // lockPosition.x - (bx - lockPosition.x)
+    y = (2 * lockPosition.y) - by;
+    z = 180-((2 * lockPosition.z) - bz);
     //printf("MODE2: %d %d %d\n", x, y, z);
 
 
@@ -384,9 +384,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = (2 * cx) - bx;// + offset; // cx - (bx - cx)
+    x = (2 * (cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
     y = (2 * cy) - by;
-    z = (2 * cz) - bz;
+    z =  (2 * (180-cz)) - bz;
     //printf("MODE3: %d %d %d\n", x, y, z);
 
     break;
@@ -405,11 +405,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   std::cout << bx << " " << by << " " << bz;
   std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
-  x = (int)(x / 1.8);
-  y = (int)(y / 1.8);
-  z = (int)(z / 1.8);
-
-  pthread_mutex_lock(&servoPosMutex);
+    pthread_mutex_lock(&servoPosMutex);
   servoPositions.x = x;
   servoPositions.y = y;
   servoPositions.z = z;
@@ -417,6 +413,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 }
 
 void setServo(SERVO servoNum, int position) {
+  position = (int)(position / 1.8);
   servoDriverFile << servoNum << "=" << position << "%" << std::endl;
   //   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   // SM_1_duty =
