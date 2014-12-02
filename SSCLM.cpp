@@ -169,7 +169,7 @@ int main() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
-  deviceMode = MODE_STABILIZE;
+  deviceMode = MODE_CONTROLLABLE;
   // Opens file that controls servo motors
   servoDriverFile.open("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
@@ -238,22 +238,7 @@ void initMPU(MPU6050 mpu) {
     // (if it's going to break, usually the code will be 1)
     printf("DMP Initialization failed (code %d)\n", devStatus);
   }
-  int k =0;
-  for(k=0; k<30; k++)
-    getXYZ(&mpu, &servoPositions);
-
-  if(mpu.devAddr ==0x68)
-    {
-
-      baseMagSen[0]=mpu.getMagSensitivity(0);
-      baseMagSen[1]=mpu.getMagSensitivity(1);
-      baseMagSen[2]=mpu.getMagSensitivity(2);
-    }
-  else{
-      contMagSen[0]=mpu.getMagSensitivity(0);
-      contMagSen[1]=mpu.getMagSensitivity(1);
-      contMagSen[2]=mpu.getMagSensitivity(2);
-  }
+  
 }
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   // if programming failed, don't try to do anything
@@ -361,18 +346,18 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   switch (deviceMode) {
   case MODE_CONTROLLABLE:
 
-    x = cx + offset;
+    x = cx;// + offset;
     y = cy;
-    z = cz;
+    z = 180-cz;
     //printf("MODE1: %d %d %d\n", x, y, z);
 
     break;
 
   case MODE_STABILIZE:
 
-    x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
-    y = (2 * lockPosition.y) - by;
-    z = ((2 * lockPosition.z) - bz);
+    x = (2 * lockPosition.x*1.8) - bx; // lockPosition.x - (bx - lockPosition.x)
+    y = (2 * lockPosition.y*1.8) - by;
+    z = 180-((2 * lockPosition.z*1.8) - bz);
     //printf("MODE2: %d %d %d\n", x, y, z);
 
 
@@ -380,7 +365,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = (2 * cx) - bx + offset; // cx - (bx - cx)
+    x = (2 * cx) - bx;// + offset; // cx - (bx - cx)
     y = (2 * cy) - by;
     z = (2 * cz) - bz;
     //printf("MODE3: %d %d %d\n", x, y, z);
@@ -388,9 +373,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     break;
 
   default:
-    x = 50;
-    y = 50;
-    z = 50;
+    x = 90;
+    y = 90;
+    z = 90;
     break;
   }
 
