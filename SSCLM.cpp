@@ -180,7 +180,9 @@ int main() {
   pinMode(BUTTON3, INPUT);
 
   float controller = waitStabalize(&controlMPU);
+  printf("controller!!!!! %7.2f\n", controller);
   float base =waitStabalize(&baseMPU);
+  printf("base!!!!! %7.2f\n", base);
   setOffset(base, controller);
 
   deviceMode = MODE_CONTROLLABLE;
@@ -599,33 +601,34 @@ float waitStabalize(MPU6050 *mpu){
       usleep(1000);
       if (!dmpReady){
 	i--;
-	continue;
-      }
-      // get current FIFO count
-      fifoCount = mpu->getFIFOCount();
+	
+      }else{
+	// get current FIFO count
+	fifoCount = mpu->getFIFOCount();
 
-      if (fifoCount == 1024) {
-	// reset so we can continue cleanly
-	mpu->resetFIFO();
-	//printf("FIFO overflow!\n");
+	if (fifoCount == 1024) {
+	  // reset so we can continue cleanly
+	  mpu->resetFIFO();
+	  //printf("FIFO overflow!\n");
 
-	// otherwise, check for DMP data ready interrupt (this should happen
-	// frequently)
-      } else if (fifoCount >= 42) {
-	// read a packet from FIFO
-	mpu->getFIFOBytes(fifoBuffer, packetSize);
+	  // otherwise, check for DMP data ready interrupt (this should happen
+	  // frequently)
+	} else if (fifoCount >= 42) {
+	  // read a packet from FIFO
+	  mpu->getFIFOBytes(fifoBuffer, packetSize);
 
-	// display Euler angles in degrees
-	mpu->dmpGetQuaternion(&q, fifoBuffer);
-	mpu->dmpGetGravity(&gravity, &q);
-	mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
-	if(i==0){
-	  startyaw = ypr[0] * 180 / M_PI;
-	  std::cout<< "start Yaw: "<< startyaw<<"\t";
-	}
-	if(i==1000){
-	  endyaw = ypr[0] * 180 / M_PI;
-	  std::cout<< "End Yaw: "<< endyaw<<std::endl;
+	  // display Euler angles in degrees
+	  mpu->dmpGetQuaternion(&q, fifoBuffer);
+	  mpu->dmpGetGravity(&gravity, &q);
+	  mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+	  if(i==0){
+	    startyaw = ypr[0] * 180 / M_PI;
+	    std::cout<< "start Yaw: "<< startyaw<<"\t";
+	  }
+	  if(i==1000){
+	    endyaw = ypr[0] * 180 / M_PI;
+	    std::cout<< "End Yaw: "<< endyaw<<std::endl;
+	  }
 	}
       }
     }
@@ -633,6 +636,6 @@ float waitStabalize(MPU6050 *mpu){
     if (diff < .01 && diff > -.01)
       stable = true;
   }
-  std::cout << "MPU Stable: " << mpu->devAddr <<std::endl;
+  std::cout << "MPU Stable: endyaw: " << endyaw <<std::endl;
   return endyaw;
 }
