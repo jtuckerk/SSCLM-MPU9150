@@ -384,8 +384,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = ( (cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
-    y = ( cy) - by;
+    x = ((cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
+    y = (cy) - by;
     z = 180-((cz) - bz);
     //printf("MODE3: %d %d %d\n", x, y, z);
 
