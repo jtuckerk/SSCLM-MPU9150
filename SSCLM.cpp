@@ -37,6 +37,7 @@ int heading(VectorFloat *mag);
 void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2);
 void buttons();
 void lights();
+void setOffset(); 
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -46,6 +47,9 @@ struct XYZposition servoPositions;
 
 // Stores the position for the arm to maintain during stabilize and combined modes
 struct XYZposition lockPosition;
+
+// Stores the x-axis offset between the controller and the base
+int offset;
 
 //set to true if the position expected is not achievable by the
 //servos
@@ -105,11 +109,10 @@ SERVO servos[3] = {0, 1, 2};
 pthread_mutex_t servoPosMutex;
 std::ofstream servoDriverFile;
 
-#define BUTTON1 2 // WiringPi pin number
-#define BUTTON2 3 // WiringPi pin number
-#define BUTTON3 4 // WiringPi pin number
-
-#define LED	4 // I'm not sure what pin it should be
+#define BUTTON1 2 // WiringPi pin numbers
+#define BUTTON2 3 
+#define BUTTON3 4 
+#define LED    16 
 
 static void *thread1function(void *arg) {
 
@@ -117,6 +120,7 @@ static void *thread1function(void *arg) {
   while (1) {
     if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
       getXYZ(&baseMPU, &basePosition);
+
     usleep(1000);
     if (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
       getXYZ(&controlMPU, &controllerPosition);
@@ -150,15 +154,15 @@ static void *thread2function(void *arg) {
 }
 
 int main() {
-
+ 
   initMPU(controlMPU);
   usleep(100000);
   initMPU(baseMPU);
   usleep(100000);
-  lockPosition.x = 90;
-  lockPosition.y = 90;
-  lockPosition.z = 90;
 
+  setOffset();
+
+  wiringPiSetup();
   // Set I/O pin directions
   pinMode(LED, OUTPUT);
   pinMode(BUTTON1, INPUT);
@@ -293,7 +297,7 @@ contMagSen[2]=mpu->getMagSensitivity(2);
 
   }
     */
-    int16_t m[3];
+    /*   int16_t m[3];
     VectorFloat mx;
     mpu->getMag(&m[0], &m[1], &m[2]);
     mx.x = m[0];
@@ -323,7 +327,7 @@ contMagSen[2]=mpu->getMagSensitivity(2);
   //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
   //	if(mpu->devAddr ==0x69)
   //	  std::cout<<std::endl;
-
+  */
     pos->x = (ypr[0] * 180 / M_PI) + 90;
     pos->y = (ypr[1] * 180 / M_PI) + 90;
     pos->z = (ypr[2] * 180 / M_PI) + 90;
@@ -357,7 +361,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   switch (deviceMode) {
   case MODE_CONTROLLABLE:
 
-    x = cx;
+    x = cx + offset;
     y = cy;
     z = cz;
 
@@ -373,7 +377,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = (2 * cx) - bx; // cx - (bx - cx)
+    x = (2 * cx) - bx + offset; // cx - (bx - cx)
     y = (2 * cy) - by;
     z = (2 * cz) - bz;
 
@@ -428,7 +432,7 @@ void buttons() {
   // http://wiringpi.com/
   // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
 
-  usleep(50000); // need to test to find correct number
+  usleep(100000); // need to test to find correct number
 
   // mode 1- controllable
   if (digitalRead(BUTTON1) == HIGH) {
@@ -455,16 +459,19 @@ void buttons() {
   if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
 
-    pthread_mutex_lock(&servoPosMutex);
-    lockPosition.x = servoPositions.x;
-    lockPosition.y = servoPositions.y;
-    lockPosition.z = servoPositions.z;
-    pthread_mutex_unlock(&servoPosMutex);
-
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
   }
 
+}
+
+void setOffset() {
+  struct XYZposition b;
+  struct XYZposition c;
+  getXYZ(&baseMPU, &b);
+  getXYZ(&controlMPU, &c);
+
+  offset = c.x - b.x;
 }
 
 // lights up lights when servo is expected to do something it cannot do
