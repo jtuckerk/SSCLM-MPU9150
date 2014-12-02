@@ -104,6 +104,13 @@ SERVO servos[3] = {0, 1, 2};
 
 pthread_mutex_t servoPosMutex;
 std::ofstream servoDriverFile;
+
+#define BUTTON1 2 // WiringPi pin number
+#define BUTTON2 3 // WiringPi pin number
+#define BUTTON3 4 // WiringPi pin number
+
+#define LED	4 // I'm not sure what pin it should be
+
 static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
@@ -152,6 +159,12 @@ int main() {
   lockPosition.y = 90;
   lockPosition.z = 90;
 
+  // Set I/O pin directions
+  pinMode(LED, OUTPUT);
+  pinMode(BUTTON1, INPUT);
+  pinMode(BUTTON2, INPUT);
+  pinMode(BUTTON3, INPUT);
+
   deviceMode = MODE_STABILIZE;
   // Opens file that controls servo motors
   servoDriverFile.open("/dev/servoblaster");
@@ -172,10 +185,9 @@ int main() {
   pthread_attr_destroy(&myattr);
 
   // continuously checks for mode changes and out of bounds errors
-  while (true) { 
+  while (true) {
     buttons();
-    lights();
-  } 
+  }
 
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
@@ -228,15 +240,15 @@ void initMPU(MPU6050 mpu) {
 
   if(mpu.devAddr ==0x68)
     {
- 
+
       baseMagSen[0]=mpu.getMagSensitivity(0);
-baseMagSen[1]=mpu.getMagSensitivity(1);
-baseMagSen[2]=mpu.getMagSensitivity(2);
+      baseMagSen[1]=mpu.getMagSensitivity(1);
+      baseMagSen[2]=mpu.getMagSensitivity(2);
     }
   else{
       contMagSen[0]=mpu.getMagSensitivity(0);
-contMagSen[1]=mpu.getMagSensitivity(1);
-contMagSen[2]=mpu.getMagSensitivity(2);
+      contMagSen[1]=mpu.getMagSensitivity(1);
+      contMagSen[2]=mpu.getMagSensitivity(2);
   }
 }
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
@@ -268,7 +280,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     /*
   if(mpu->devAddr ==0x68)
     {
-     
+
        baseMagSen[0]=mpu->getMagSensitivity(0);
 baseMagSen[1]=mpu->getMagSensitivity(1);
 baseMagSen[2]=mpu->getMagSensitivity(2);
@@ -295,7 +307,7 @@ contMagSen[2]=mpu->getMagSensitivity(2);
                                                    // magnetometer
     //mx.z= m[2] * 10.0f * 1229.0f / 4096.0f;
     mx.z= m[2];
-    
+
     magHeading(mpu, &m[0], &m[1], &m[2]);
     //      std::cout<< "x y z: " <<m[0]<<" "<<m[1]<<" "<<m[2]<<std::endl;
       float norm;
@@ -377,6 +389,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   XinBounds = boundServo(&x);
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
+  lights();
   std::cout << bx << " " << by << " " << bz;
   std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
@@ -409,21 +422,13 @@ void setServo(SERVO servoNum, int position) {
 // button push changes mode
 // called in main method()
 
-#define BUTTON1 2 // WiringPi pin number
-#define BUTTON2 3 // WiringPi pin number
-#define BUTTON3 4 // WiringPi pin number
-
 void buttons() {
 
   // not sure what all we can use
   // http://wiringpi.com/
   // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
 
-  pinMode(BUTTON1, INPUT);
-  pinMode(BUTTON2, INPUT);
-  pinMode(BUTTON3, INPUT);
-
-  usleep(10000); // need to test to find correct number
+  usleep(50000); // need to test to find correct number
 
   // mode 1- controllable
   if (digitalRead(BUTTON1) == HIGH) {
@@ -446,28 +451,22 @@ void buttons() {
     printf("Button 3 pushed\n");
   }
 
-
 }
 
-
-#define LED	4 // I'm not sure what pin it should be 
-
 // lights up lights when servo is expected to do something it cannot do
-// uses wiringPi 
+// uses wiringPi
 // called in main()
 void lights(){
 
   if (!XinBounds || !YinBounds || !ZinBounds){
     printf("*****OUT OF BOUNDS*****\n");
 
-    pinMode(LED, OUTPUT); 
-
     // write 1 to light up
-    digitalWrite(LED, 1); 
+    digitalWrite(LED, 1);
 
-  } else { 
+  } else {
     // write 0 to turn off light
-    digitalWrite(LED, 0);  
+    digitalWrite(LED, 0);
   }
 }
 
@@ -504,7 +503,7 @@ void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2){
     adj = contMagSen;
   else
     adj = baseMagSen;
-  
+
   //printf("x y z sensitivity: %F, %F, %F", adj[0], adj[1], adj[2]);
   *m0=  *m0*((adj[0]-128)/256+1);
   *m1=  *m1*((adj[1]-128)/256+1);
