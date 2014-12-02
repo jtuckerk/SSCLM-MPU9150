@@ -371,7 +371,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
     x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
     y = (2 * lockPosition.y) - by;
-    z = 180- ((2 * lockPosition.z) - bz);
+    z = ((2 * lockPosition.z) - bz);
 
     break;
 
@@ -409,8 +409,6 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 }
 
 void setServo(SERVO servoNum, int position) {
-  if (servoNum == 0)
-    position = 50;
   servoDriverFile << servoNum << "=" << position << "%" << std::endl;
   //   float SM_1_duty; /* Servomotor , connect to ePWM0A */
   // SM_1_duty =
