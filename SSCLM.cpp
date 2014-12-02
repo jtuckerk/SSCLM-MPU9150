@@ -1,5 +1,6 @@
 // Self Stabilizing Controllable Laser Mount
 // Amy Pickens, Nate Honold, Tucker Kirven
+
 #include <fstream>
 #include <iostream>
 #include <fcntl.h>
