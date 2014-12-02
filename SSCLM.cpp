@@ -171,10 +171,11 @@ int main() {
   pthread_create(&thread2, &myattr, thread2function, (void *)0);
   pthread_attr_destroy(&myattr);
 
-  // call button method
-  // continuously checks for mode changes
-  buttons();
-  lights();
+  // continuously checks for mode changes and out of bounds errors
+  while (true) { 
+    buttons();
+    lights();
+  } 
 
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
@@ -414,8 +415,6 @@ void setServo(SERVO servoNum, int position) {
 
 void buttons() {
 
-  // libraries - BCM or Wiring Pie
-  // need to download WiringPi ???
   // not sure what all we can use
   // http://wiringpi.com/
   // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
@@ -424,47 +423,51 @@ void buttons() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
-  int count = 0;
+  usleep(10000); // need to test to find correct number
 
-  while (count < 10) {
-    // have 10 total mode changes available
-    // can also change to exit when all 3 pushed at once - testing needed
-
-    usleep(10000); // need to test to find correct number
-
-  // mode 1- MODE_CONTROLLABLE
+  // mode 1- controllable
   if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
-    count++;
   }
 
-  // mode 2- MODE_STABILIZE
+  // mode 2- self-stabilize
   if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
-    count++;
   }
 
-  // mode 3- MODE_COMBINED
+  // mode 3- combined
   if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
-    count++;
   }
 
-  }
 
 }
 
-//lights up lights when servo is expected to do something it cannot do
+
+#define LED	4 // I'm not sure what pin it should be 
+
+// lights up lights when servo is expected to do something it cannot do
+// uses wiringPi 
+// called in main()
 void lights(){
+
   if (!XinBounds || !YinBounds || !ZinBounds){
     printf("*****OUT OF BOUNDS*****\n");
-    //make a light light up or 3?
+
+    pinMode(LED, OUTPUT); 
+
+    // write 1 to light up
+    digitalWrite(LED, 1); 
+
+  } else { 
+    // write 0 to turn off light
+    digitalWrite(LED, 0);  
   }
 }
 
