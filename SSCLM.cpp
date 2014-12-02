@@ -53,7 +53,7 @@ struct XYZposition servoPositions;
 struct XYZposition lockPosition;
 
 // Stores the x-axis offset between the controller and the base
-int baseOffset, controllerOffset;
+float baseOffset, controllerOffset;
 
 // Stores magnetic calibration data
 struct XYZposition baseMagR;
@@ -324,13 +324,13 @@ contMagSen[2]=mpu->getMagSensitivity(2);
   mx.y *= norm;
     */
   //  std::cout<<"heading: "<<heading(&mx)<<std::endl;
-        printf("yaw  %7.2f %7.2f     \n", ypr[0] * 180 / M_PI, baseOffset);
-  	if(mpu->devAddr ==0x69)
-  	  std::cout<<std::endl;
+    //printf("yaw  %7.2f %7.2f     \n", 90+ypr[0] * 180 / M_PI, baseOffset);
+    //	if(mpu->devAddr ==0x69)
+    //	  std::cout<<std::endl;
   
-    pos->x = (ypr[0] * 180 / M_PI) + 90;
-    pos->y = (ypr[1] * 180 / M_PI) + 90;
-    pos->z = (ypr[2] * 180 / M_PI) + 90;
+    pos->x = (ypr[0] * 180 / M_PI+90);
+    pos->y = (ypr[1] * 180 / M_PI+90);
+    pos->z = (ypr[2] * 180 / M_PI+90);
   }
 }
 
@@ -402,8 +402,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
   lights();
-  //std::cout << bx << " " << by << " " << bz;
-  //std::cout << " " << x << " " << y << " " << z << " " << std::endl;
+  std::cout << bx << " " << by << " " << bz;
+  std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
   x = (int)(x / 1.8);
   y = (int)(y / 1.8);
@@ -529,7 +529,7 @@ void buttons() {
 
 void setOffset(float base, float controller) {
 
-  baseOffset =  base;
+  baseOffset =  base-90;
   printf("base: %7.2f base offset %7.2f\n", base, baseOffset);
   controllerOffset = controller -90-baseOffset;
   printf("controller: %F controller offset %F\n", controller, controllerOffset);
@@ -597,7 +597,7 @@ float waitStabalize(MPU6050 *mpu){
   float startyaw, endyaw;
   while (!stable){
     // if programming failed, don't try to do anything
-    for(int i =0; i < 1001; i++){
+    for(int i =0; i < 100; ){
       usleep(1000);
       if (!dmpReady){
 	i--;
@@ -621,12 +621,14 @@ float waitStabalize(MPU6050 *mpu){
 	  mpu->dmpGetQuaternion(&q, fifoBuffer);
 	  mpu->dmpGetGravity(&gravity, &q);
 	  mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
-	  if(i==0){
-	    startyaw = ypr[0] * 180 / M_PI;
+	  printf("i: %d yaw %7.2f\n",i,ypr[0] * 180 / M_PI);
+	  i++;
+	  if(i==1){
+	    startyaw = 90+ypr[0] * 180 / M_PI;
 	    std::cout<< "start Yaw: "<< startyaw<<"\t";
 	  }
-	  if(i==1000){
-	    endyaw = ypr[0] * 180 / M_PI;
+	  if(i==99){
+	    endyaw = 90+ypr[0] * 180 / M_PI;
 	    std::cout<< "End Yaw: "<< endyaw<<std::endl;
 	  }
 	}
@@ -637,5 +639,5 @@ float waitStabalize(MPU6050 *mpu){
       stable = true;
   }
   std::cout << "MPU Stable: endyaw: " << endyaw <<std::endl;
-  return endyaw;
+  return startyaw;
 }
