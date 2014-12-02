@@ -1833,7 +1833,7 @@ void MPU6050::getMag(int16_t* mx, int16_t* my, int16_t* mz) {
   *mz = (((int16_t)buffer[5]) << 8) | buffer[4];
   setI2CBypassEnabled(false);
 }
-void MPU6050::getMagSensitivity(int8_t* mx, int8_t* my, int8_t* mz) {
+uint8_t MPU6050::getMagSensitivity(int i) {
 
   //read mag
   I2Cdev::writeByte(devAddr, MPU6050_RA_INT_PIN_CFG, 0x02); //set i2c bypass enable pin to true to access magnetometer
@@ -1841,11 +1841,12 @@ void MPU6050::getMagSensitivity(int8_t* mx, int8_t* my, int8_t* mz) {
   usleep(10000);
   I2Cdev::writeByte(MPU9150_RA_MAG_ADDRESS, 0x0A, 0x01); //enable the magnetometer
   usleep(10000);
-  I2Cdev::readBytes(MPU9150_RA_MAG_ADDRESS, 0x10, 3, buffer);
-  *mx = (int8_t) buffer[0];
-  *my = (int8_t) buffer[1];
-  *mz = (int8_t) buffer[2];
+  I2Cdev::readByte(MPU9150_RA_MAG_ADDRESS, 0x10+i,  buffer);
+  //  *mx = (int8_t) buffer[0];
+  //*my = (int8_t) buffer[1];
+  //*mz = (int8_t) buffer[2];
   setI2CBypassEnabled(false);
+  return buffer[0];
 }
 
 // TEMP_OUT_* registers
