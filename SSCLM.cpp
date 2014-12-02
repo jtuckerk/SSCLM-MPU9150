@@ -440,6 +440,13 @@ void buttons() {
   // mode 2- self-stabilize
   if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
+
+    pthread_mutex_lock(&servoPosMutex);
+    lockPosition.x = servoPositions.x;
+    lockPosition.y = servoPositions.y;
+    lockPosition.z = servoPositions.z;
+    pthread_mutex_unlock(&servoPosMutex);
+
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
   }
@@ -447,6 +454,13 @@ void buttons() {
   // mode 3- combined
   if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
+
+    pthread_mutex_lock(&servoPosMutex);
+    lockPosition.x = servoPositions.x;
+    lockPosition.y = servoPositions.y;
+    lockPosition.z = servoPositions.z;
+    pthread_mutex_unlock(&servoPosMutex);
+
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
   }
