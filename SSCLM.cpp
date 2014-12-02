@@ -37,7 +37,7 @@ int heading(VectorFloat *mag);
 void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2);
 void buttons();
 void lights();
-void setOffset(); 
+void setOffset();
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -110,9 +110,9 @@ pthread_mutex_t servoPosMutex;
 std::ofstream servoDriverFile;
 
 #define BUTTON1 2 // WiringPi pin numbers
-#define BUTTON2 3 
-#define BUTTON3 4 
-#define LED    16 
+#define BUTTON2 3
+#define BUTTON3 4
+#define LED    16
 
 static void *thread1function(void *arg) {
 
@@ -154,7 +154,7 @@ static void *thread2function(void *arg) {
 }
 
 int main() {
- 
+
   initMPU(controlMPU);
   usleep(100000);
   initMPU(baseMPU);
@@ -364,6 +364,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     x = cx + offset;
     y = cy;
     z = cz;
+    //printf("MODE1: %d %d %d\n", x, y, z);
 
     break;
 
@@ -372,6 +373,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
     y = (2 * lockPosition.y) - by;
     z = ((2 * lockPosition.z) - bz);
+    //printf("MODE2: %d %d %d\n", x, y, z);
+
 
     break;
 
@@ -380,6 +383,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     x = (2 * cx) - bx + offset; // cx - (bx - cx)
     y = (2 * cy) - by;
     z = (2 * cz) - bz;
+    //printf("MODE3: %d %d %d\n", x, y, z);
 
     break;
 
@@ -451,6 +455,7 @@ void buttons() {
 
     deviceMode = MODE_STABILIZE;
     printf("Button 2 pushed\n");
+    printf("MODE2: %d %d %d\n", lockPosition.x, lockPosition.y, lockPosition.z);
   }
 
   // mode 3- combined
