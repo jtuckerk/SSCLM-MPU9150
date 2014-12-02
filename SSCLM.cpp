@@ -163,8 +163,8 @@ int main() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
-  waitStabalize(&controlMPU);
-  waitStabalize(&baseMPU);
+  float controller = waitStabalize(&controlMPU);
+  float base = waitStabalize(&baseMPU);
  
   setOffset(base, controller);
 
@@ -368,7 +368,7 @@ void buttons() {
   usleep(100000); // need to test to find correct number
 
   // mode 1- controllable
-  else if (digitalRead(BUTTON1) == HIGH) {
+  if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
