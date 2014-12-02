@@ -148,12 +148,12 @@ int main() {
   usleep(100000);
   initMPU(baseMPU);
   usleep(100000);
-  lockPosition.x = 50;
-  lockPosition.y = 50;
-  lockPosition.z = 50;
+  lockPosition.x = 90;
+  lockPosition.y = 90;
+  lockPosition.z = 90;
 
-  deviceMode = MODE_CONTROLLABLE;
-  // opens file that controls servo motors
+  deviceMode = MODE_STABILIZE;
+  // Opens file that controls servo motors
   servoDriverFile.open("/dev/servoblaster");
   pthread_mutexattr_t mutexattr;
   pthread_mutexattr_init(&mutexattr);
@@ -264,7 +264,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     //@@!! gets mag vector still needs to be used to correct for drift
     // may just need to project it onto the horizontal plane and use
     // that to determine the rotation about the Z axis. math is hard.
-
+    /*
   if(mpu->devAddr ==0x68)
     {
      
@@ -279,6 +279,7 @@ contMagSen[1]=mpu->getMagSensitivity(1);
 contMagSen[2]=mpu->getMagSensitivity(2);
 
   }
+    */
     int16_t m[3];
     VectorFloat mx;
     mpu->getMag(&m[0], &m[1], &m[2]);
@@ -295,7 +296,7 @@ contMagSen[2]=mpu->getMagSensitivity(2);
     mx.z= m[2];
     
     magHeading(mpu, &m[0], &m[1], &m[2]);
-      std::cout<< "x y z: " <<m[0]<<" "<<m[1]<<" "<<m[2]<<std::endl;
+    //      std::cout<< "x y z: " <<m[0]<<" "<<m[1]<<" "<<m[2]<<std::endl;
       float norm;
       norm = sqrt(mx.x * mx.x + mx.y * mx.y);
   if (norm == 0.0f)
@@ -305,8 +306,10 @@ contMagSen[2]=mpu->getMagSensitivity(2);
   mx.y *= norm;
 
   //  std::cout<<"heading: "<<heading(&mx)<<std::endl;
-    //    printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
-    //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
+  //      printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
+  //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
+  //	if(mpu->devAddr ==0x69)
+  //	  std::cout<<std::endl;
 
     pos->x = (ypr[0] * 180 / M_PI) + 90;
     pos->y = (ypr[1] * 180 / M_PI) + 90;
@@ -351,7 +354,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
     x = (2 * lockPosition.x) - bx; // lockPosition.x - (bx - lockPosition.x)
     y = (2 * lockPosition.y) - by;
-    z = (2 * lockPosition.z) - bz;
+    z = 180- ((2 * lockPosition.z) - bz);
 
     break;
 
@@ -373,8 +376,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   XinBounds = boundServo(&x);
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
-  //std::cout << bx << " " << by << " " << bz;
-  //std::cout << " " << x << " " << y << " " << z << " " << std::endl;
+  std::cout << bx << " " << by << " " << bz;
+  std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
   x = (int)(x / 1.8);
   y = (int)(y / 1.8);

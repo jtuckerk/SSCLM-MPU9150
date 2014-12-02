@@ -164,7 +164,7 @@ void setup(MPU6050 *mpu) {
 
   MagRate = 10; // set magnetometer read rate in Hz; 10 to 100 (max) Hz are
                 // reasonable values
-  mpu.checkMagStatus(
+  mpu->checkMagStatus();
   // Digital low pass filter configuration.
   // It also determines the internal sampling rate used by the device as shown
   // in the table below.
@@ -255,7 +255,7 @@ mcount2++;
                                                    // magnetometer
       mz = m3 * 10.0f * 1229.0f / 4096.0f + 270.0f;
       mcount1 = 0;
-      //printf("MAG1: %d, %d, %d", m1, m2, m3);
+      //printf("MAG1: %d, %d, %d\n", m1, m2, m3);
     }
     else if(mcount2 > 100 / MagRate ) { // this is a poor man's way of setting the
                   // magnetometer read rate (see below)
@@ -392,8 +392,7 @@ yaw = atan2(2.0f * (q5.x * q5.y + q5.w * q5.z),
   printf("%F\t", roll);
   if (mpu->devAddr == 0x69)
     printf("\n");
-  
-/*
+  /*
   printf("rate = ");
   printf("%F", (float)1.0f / deltat);
   printf(" Hz\n");
