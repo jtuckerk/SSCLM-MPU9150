@@ -37,9 +37,11 @@ int heading(VectorFloat *mag);
 void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2);
 void buttons();
 void lights();
-void setOffset();
+void setOffset(float base, float controller);
 void calibrateMag(MPU6050 *mpu, struct XYZposition *r, struct XYZposition *z);
 void adjustMagVal(int16_t *m0,int16_t *m1,int16_t *m2, struct XYZposition *r, struct XYZposition *z);
+float waitStabalize(MPU6050 *mpu);
+
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -51,7 +53,7 @@ struct XYZposition servoPositions;
 struct XYZposition lockPosition;
 
 // Stores the x-axis offset between the controller and the base
-int offset;
+int baseOffset, controllerOffset;
 
 // Stores magnetic calibration data
 struct XYZposition baseMagR;
@@ -126,11 +128,11 @@ static void *thread1function(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
   while (1) {
-    if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
+    if (deviceMode != MODE_CALIBRATE&& (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED))
       getXYZ(&baseMPU, &basePosition);
 
     usleep(1000);
-    if (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
+    if (deviceMode != MODE_CALIBRATE&& (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED))
       getXYZ(&controlMPU, &controllerPosition);
 
     // calculate neccesary servo position and writes to the servoPositions
@@ -168,7 +170,7 @@ int main() {
   initMPU(baseMPU);
   usleep(100000);
 
-  setOffset();
+  
 
   wiringPiSetup();
   // Set I/O pin directions
@@ -176,6 +178,10 @@ int main() {
   pinMode(BUTTON1, INPUT);
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
+
+  float controller = waitStabalize(&controlMPU);
+  float base =waitStabalize(&baseMPU);
+  setOffset(base, controller);
 
   deviceMode = MODE_CONTROLLABLE;
   // Opens file that controls servo motors
@@ -314,13 +320,12 @@ contMagSen[2]=mpu->getMagSensitivity(2);
   norm = 1.0f / norm;
   mx.x *= norm;
   mx.y *= norm;
-
+    */
   //  std::cout<<"heading: "<<heading(&mx)<<std::endl;
-  //      printf("ypr  %7.2f %7.2f %7.2f    \n",90+ ypr[0] * 180 / M_PI,
-  //    90+ypr[1] * 180 / M_PI,90+ ypr[2] * 180 / M_PI);
-  //	if(mpu->devAddr ==0x69)
-  //	  std::cout<<std::endl;
-  */
+        printf("yaw  %7.2f %7.2f     \n", ypr[0] * 180 / M_PI, baseOffset);
+  	if(mpu->devAddr ==0x69)
+  	  std::cout<<std::endl;
+  
     pos->x = (ypr[0] * 180 / M_PI) + 90;
     pos->y = (ypr[1] * 180 / M_PI) + 90;
     pos->z = (ypr[2] * 180 / M_PI) + 90;
@@ -358,7 +363,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_CONTROLLABLE:
 
-    x = cx;// + offset;
+    x = cx- controllerOffset;
     y = cy;
     z = 180-cz;
     //printf("MODE1: %d %d %d\n", x, y, z);
@@ -367,7 +372,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_STABILIZE:
 
-    x = (2 * lockPosition.x*1.8) - bx; // lockPosition.x - (bx - lockPosition.x)
+    x = (2 * lockPosition.x*1.8) - bx-baseOffset; // lockPosition.x - (bx - lockPosition.x)
     y = (2 * lockPosition.y*1.8) - by;
     z = 180-((2 * lockPosition.z*1.8) - bz);
     //printf("MODE2: %d %d %d\n", x, y, z);
@@ -395,8 +400,8 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
   lights();
-  std::cout << bx << " " << by << " " << bz;
-  std::cout << " " << x << " " << y << " " << z << " " << std::endl;
+  //std::cout << bx << " " << by << " " << bz;
+  //std::cout << " " << x << " " << y << " " << z << " " << std::endl;
 
   x = (int)(x / 1.8);
   y = (int)(y / 1.8);
@@ -422,18 +427,18 @@ void setServo(SERVO servoNum, int position) {
 }
 
 void calibrateMag(MPU6050 *mpu, struct XYZposition *r, struct XYZposition *z) {
-  int maxx, maxy, maxz;
-  int minx, miny, minz;
-  int tempx, tempy, tempz;
+  int16_t maxx, maxy, maxz;
+  int16_t minx, miny, minz;
+  int16_t tempx, tempy, tempz;
 
   mpu->getMag(&maxx, &maxy, &maxz);
   minx = maxx;
   miny = maxy;
   minz = maxz;
 
-  for(int i=0; i<10000; ++i) {
+  for(int i=0; i<500; ++i) {
     mpu->getMag(&tempx, &tempy, &tempz);
-
+    std::cout << i << std::endl;
     if(tempx > maxx)
       maxx = tempx;
     if(tempy > maxy)
@@ -457,6 +462,7 @@ void calibrateMag(MPU6050 *mpu, struct XYZposition *r, struct XYZposition *z) {
   z->z = maxz - r->z;
 
   for(int i=0; i<10; ++i) {
+    printf("calibrated");
     digitalWrite(LED, 1);
     usleep(100000);
     digitalWrite(LED, 0);
@@ -484,6 +490,7 @@ void buttons() {
 
   if (digitalRead(BUTTON1) == HIGH && digitalRead(BUTTON2) == HIGH && digitalRead(BUTTON3) == HIGH) {
     deviceMode = MODE_CALIBRATE;
+    printf("CALIBRATING\n");
     calibrateMag(&baseMPU, &baseMagR, &baseMagZ);
     calibrateMag(&controlMPU, &controlMagR, &controlMagZ);
   }
@@ -518,13 +525,12 @@ void buttons() {
   }
 }
 
-void setOffset() {
-  struct XYZposition b;
-  struct XYZposition c;
-  getXYZ(&baseMPU, &b);
-  getXYZ(&controlMPU, &c);
+void setOffset(float base, float controller) {
 
-  offset = c.x - b.x;
+  baseOffset =  base;
+  printf("base: %7.2f base offset %7.2f\n", base, baseOffset);
+  controllerOffset = controller -90-baseOffset;
+  printf("controller: %F controller offset %F\n", controller, controllerOffset);
 }
 
 // lights up lights when servo is expected to do something it cannot do
@@ -533,7 +539,7 @@ void setOffset() {
 void lights(){
 
   if (!XinBounds || !YinBounds || !ZinBounds){
-    printf("*****OUT OF BOUNDS*****\n");
+    //printf("*****OUT OF BOUNDS*****\n");
 
     // write 1 to light up
     digitalWrite(LED, 1);
@@ -582,4 +588,51 @@ void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2){
   *m0=  *m0*((adj[0]-128)/256+1);
   *m1=  *m1*((adj[1]-128)/256+1);
   *m2=  *m2*((adj[2]-128)/256+1);
+}
+float waitStabalize(MPU6050 *mpu){
+  bool stable = false;
+  
+  float startyaw, endyaw;
+  while (!stable){
+    // if programming failed, don't try to do anything
+    for(int i =0; i < 1001; i++){
+      usleep(1000);
+      if (!dmpReady){
+	i--;
+	continue;
+      }
+      // get current FIFO count
+      fifoCount = mpu->getFIFOCount();
+
+      if (fifoCount == 1024) {
+	// reset so we can continue cleanly
+	mpu->resetFIFO();
+	//printf("FIFO overflow!\n");
+
+	// otherwise, check for DMP data ready interrupt (this should happen
+	// frequently)
+      } else if (fifoCount >= 42) {
+	// read a packet from FIFO
+	mpu->getFIFOBytes(fifoBuffer, packetSize);
+
+	// display Euler angles in degrees
+	mpu->dmpGetQuaternion(&q, fifoBuffer);
+	mpu->dmpGetGravity(&gravity, &q);
+	mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+	if(i==0){
+	  startyaw = ypr[0] * 180 / M_PI;
+	  std::cout<< "start Yaw: "<< startyaw<<"\t";
+	}
+	if(i==1000){
+	  endyaw = ypr[0] * 180 / M_PI;
+	  std::cout<< "End Yaw: "<< endyaw<<std::endl;
+	}
+      }
+    }
+    float diff = endyaw - startyaw;
+    if (diff < .01 && diff > -.01)
+      stable = true;
+  }
+  std::cout << "MPU Stable: " << mpu->devAddr <<std::endl;
+  return endyaw;
 }
