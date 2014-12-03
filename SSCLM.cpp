@@ -68,10 +68,11 @@ static void *setPosition(void *arg) {
 int main() {
 
   initMPU(controlMPU);
-  usleep(100000);
+  usleep(100000); //@@
   initMPU(baseMPU);
-  usleep(100000);
+  usleep(100000); //@@
 
+  //initializes WiringPi IO library
   wiringPiSetup();
   // Set I/O pin directions
   pinMode(LED, OUTPUT);
@@ -79,6 +80,8 @@ int main() {
   pinMode(BUTTON2, INPUT);
   pinMode(BUTTON3, INPUT);
 
+  // waits for sensor values to settle
+  // this usually takes about 15 seconds
   float controller = waitStabalize(&controlMPU);
   float base = waitStabalize(&baseMPU);
  
@@ -113,6 +116,10 @@ int main() {
   pthread_join(thread2, 0);
   return 0;
 }
+// MPU initialization code - borrowed from a demo 
+// provided by Jeff Rowberg, MPU library author.
+// Initializes the device and its digital motion processing
+// (dmp) and verifies that it is succesful
 void initMPU(MPU6050 mpu) {
   // initialize device
   std::cout<<"Initializing I2C devices...\n";
@@ -153,6 +160,11 @@ void initMPU(MPU6050 mpu) {
     std::cout<<"DMP Initialization failed (code << devStatus"<<")\n";
   }
 }
+// Reads the FIFO buffer on the MPU9150 and uses the MPU library
+// to interpret those values and output the orientation in a
+// yaw, pitch, roll format
+// the values are converted to degrees and offset to match
+// orient the servos correctly
 bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   // if programming failed, don't try to do anything
   if (!dmpReady)
@@ -175,13 +187,14 @@ bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     mpu->dmpGetGravity(&gravity, &q);
     mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
 
-    pos->x = (ypr[0] * 180 / M_PI + 90);
-    pos->y = (ypr[1] * 180 / M_PI + 90);
-    pos->z = (ypr[2] * 180 / M_PI + 90);
+    pos->x = (ypr[0] * 180 / M_PI + ZEROPOS);
+    pos->y = (ypr[1] * 180 / M_PI + ZEROPOS);
+    pos->z = (ypr[2] * 180 / M_PI + ZEROPOS);
     return true;
   }
 }
-
+// keeps the servo from shaking by trying to
+// to go beyond its maximum or minimum position
 bool boundServo(int *pos) {
   if (*pos > SERVO_MAX) {
     *pos = SERVO_MAX;
@@ -209,47 +222,50 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   switch (deviceMode) {
 
   case MODE_CONTROLLABLE:
-
+    //mimics the controller 
     x = cx - controllerOffset;
     y = cy;
     z = 180 - cz;
-   
-
     break;
 
   case MODE_STABILIZE:
-
-    x = 90 + (lockPosition.x - bx) -
+    // offsets to maintain the last position before mode switch
+    x = ZEROPOS + (lockPosition.x - bx) -
         baseOffset; // lockPosition.x - (bx - lockPosition.x)
-    y = 90 + (lockPosition.y - by);
-    z = 180 - (90 + (lockPosition.z - bz));
-   
-
+    y = ZEROPOS + (lockPosition.y - by);
+    z = 180 - (ZEROPOS + (lockPosition.z - bz)); //@@
     break;
 
   case MODE_COMBINED:
-
-    x = 90 + ((cx - controllerOffset) - bx) -
+    // mimics the controller no matter the base position
+    x = ZEROPOS + ((cx - controllerOffset) - bx) -
         baseOffset; // + offset; // cx - (bx - cx)
-    y = 90 + (cy - by);
-    z = 180 - (90 + (cz - bz));
-   
+    y = ZEROPOS + (cy - by);
+    z = 180 - (ZEROPOS + (cz - bz));
+
     break;
 
   default:
-    x = 90;
-    y = 90;
-    z = 90;
+    x = ZEROPOS;
+    y = ZEROPOS;
+    z = ZEROPOS;
     break;
   }
 
+  // Ensures the servos are not set beyond their capabilities
+  // sets a flag if any servo is expected to go out of range
   XinBounds = boundServo(&x);
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
-  lights();
+
   PRINT_DEBUG4("BASE: %d %d %d \t", bx, by, bz);
   PRINT_DEBUG4("CONTROLLER: %d %d %d \t ", cx, cy, cz);
   PRINT_DEBUG4("SERVO: %d %d %d \n", x, y, z);
+  
+  // sets lights if any servo cannot reach the requested position 
+  outOfBoundsLight();
+  
+
 
   pthread_mutex_lock(&servoPosMutex);
   servoPositions.x = x;
@@ -258,6 +274,10 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   pthread_mutex_unlock(&servoPosMutex);
 }
 
+// Takes a servo number 0, 1, 2 - x, y, z respectively
+// and sets them to a value between 0 and 100%
+// our servos do not operate well beyond 20 and 80% so
+// setServo will always recieve values within that range
 void setServo(int servoNum, int position) {
   //ServoBlaster driver expects input in range 0%-100% 
   position = (int)(position / 1.8);
@@ -267,7 +287,6 @@ void setServo(int servoNum, int position) {
 // 3 buttons- 1 for each mode
 // button push changes mode
 // called in main method()
-
 void userModeControl() {
 
   usleep(100000); 
@@ -283,6 +302,7 @@ void userModeControl() {
   else if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
 
+    //sets to stabalize at the most recent position
     pthread_mutex_lock(&servoPosMutex);
     lockPosition.x = servoPositions.x;
     lockPosition.y = servoPositions.y;
@@ -302,17 +322,19 @@ void userModeControl() {
     PRINT_DEBUG("Button 3 pushed: Combined Mode\n");
   }
 }
-
+// When the two MPU's are initialized facing the same direction
+// their YAW or Z values may still be different, this sets the 
+// base MPU to be the zeroPosition (mechanically fixed at that position)
+// and zeroes the controller off of that position value.
 void setOffset(float base, float controller) {
 
-  baseOffset = base - 90;
-  controllerOffset = controller - 90 - baseOffset;
+  baseOffset = base - ZEROPOS;
+  controllerOffset = controller - ZEROPOS - baseOffset;
 }
 
 // lights up lights when servo is expected to do something it cannot do
-// uses wiringPi
-// called in main()
-void lights() {
+// Called after servo position is bounded in calculateServoPos
+void outOfBoundsLight() {
 
   if (!XinBounds || !YinBounds || !ZinBounds) {
     // write 1 to turn on LED
@@ -323,6 +345,11 @@ void lights() {
     digitalWrite(LED, 0);
   }
 }
+// Upon initialization the MPU's yaw value can take anywhere
+// between a few milliseconds and 15 seconds to stabalize 
+// while still. This algorithm ensures that the position
+// will no longer drift once the device is being used
+// while this is taking place the output light blinks 
 float waitStabalize(MPU6050 *mpu) {
   bool stable = false;
   digitalWrite(LED, 1);
@@ -361,16 +388,20 @@ float waitStabalize(MPU6050 *mpu) {
 	if (i == 75)
 	  digitalWrite(LED, 1);
 	if (i == 1) {
-	  startyaw = 90+ypr[0] * 180 / M_PI;
-	  std::cout<< "start Yaw: " << startyaw << "\t";
+
+	  startyaw = ZEROPOS+ypr[0] * 180 / M_PI;
+	  std::cout << "start Yaw: " << startyaw << "\t";
 	}
 	if (i == 99) {
-	  endyaw = 90+ypr[0] * 180 / M_PI;
-	  std::cout<< "End Yaw: " << endyaw << std::endl;
+	  endyaw = ZEROPOS+ypr[0] * 180 / M_PI;
+	  std::cout << "End Yaw: " << endyaw << std::endl;
+
 	}
         
       }
     }
+    //ensures minimal difference over a fixed period of time
+    //this has been tested to indicate stabilization
     float diff = endyaw - startyaw;
     if (diff < .01 && diff > -.01)
       stable = true;
