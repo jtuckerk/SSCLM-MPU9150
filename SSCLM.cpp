@@ -239,10 +239,10 @@ void initMPU(MPU6050 mpu) {
     printf("DMP Initialization failed (code %d)\n", devStatus);
   }
 }
-void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
+bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   // if programming failed, don't try to do anything
   if (!dmpReady)
-    return;
+    return false;
   // get current FIFO count
   fifoCount = mpu->getFIFOCount();
 
@@ -265,6 +265,7 @@ void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     pos->x = (ypr[0] * 180 / M_PI + 90);
     pos->y = (ypr[1] * 180 / M_PI + 90);
     pos->z = (ypr[2] * 180 / M_PI + 90);
+    return true;
   }
 }
 
@@ -421,55 +422,33 @@ void lights() {
 float waitStabalize(MPU6050 *mpu) {
   bool stable = false;
   digitalWrite(LED, 1);
+  XYZposition pos;
   float startyaw, endyaw;
   while (!stable) {
-    // if programming failed, don't try to do anything
     for (int i = 0; i < 100;) {
       usleep(1000);
-      if (!dmpReady) {
-        i--;
-
-      } else {
-        // get current FIFO count
-        fifoCount = mpu->getFIFOCount();
-
-        if (fifoCount == 1024) {
-          // reset so we can continue cleanly
-          mpu->resetFIFO();
-          // printf("FIFO overflow!\n");
-
-          // otherwise, check for DMP data ready interrupt (this should happen
-          // frequently)
-        } else if (fifoCount >= 42) {
-          // read a packet from FIFO
-          mpu->getFIFOBytes(fifoBuffer, packetSize);
-
-          // display Euler angles in degrees
-          mpu->dmpGetQuaternion(&q, fifoBuffer);
-          mpu->dmpGetGravity(&gravity, &q);
-          mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
-          printf("i: %d yaw %7.2f\n", i, ypr[0] * 180 / M_PI);
-          i++;
-
-          if (i == 25)
-            digitalWrite(LED, 0);
-          if (i == 75)
-            digitalWrite(LED, 1);
-          if (i == 1) {
-            startyaw = 90 + ypr[0] * 180 / M_PI;
-            std::cout << "start Yaw: " << startyaw << "\t";
-          }
-          if (i == 99) {
-            endyaw = 90 + ypr[0] * 180 / M_PI;
-            std::cout << "End Yaw: " << endyaw << std::endl;
-          }
-        }
+      
+      if(getXYZ(mpu, &pos)){
+	i++;
+      
+	if (i == 25)
+	  digitalWrite(LED, 0);
+	if (i == 75)
+	  digitalWrite(LED, 1);
+	if (i == 1) {
+	  startyaw = 90 + pos.x * 180 / M_PI;
+	  std::cout << "start Yaw: " << startyaw << "\t";
+	}
+	if (i == 99) {
+	  endyaw = 90 + pos.x * 180 / M_PI;
+	  std::cout << "End Yaw: " << endyaw << std::endl;
+	}
+        
       }
     }
     float diff = endyaw - startyaw;
     if (diff < .01 && diff > -.01)
       stable = true;
   }
-  std::cout << "MPU Stable: endyaw: " << endyaw << std::endl;
   return startyaw;
 }
