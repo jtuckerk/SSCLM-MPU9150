@@ -10,7 +10,7 @@ static void *getPosition(void *arg) {
     if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
       getXYZ(&baseMPU, &basePosition);
 
-    usleep(1000);
+  
     if(deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
       getXYZ(&controlMPU, &controllerPosition);
 
@@ -42,7 +42,6 @@ static void *setPosition(void *arg) {
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
     servoPosUpdated = false;
-    usleep(400);
   }
 
   return (void *)0;
