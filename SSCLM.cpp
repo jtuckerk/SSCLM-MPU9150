@@ -2,16 +2,7 @@
 // Amy Pickens, Nate Honold, Tucker Kirven
 
 #include "SSCLM.h"
-//#define DEBUG 
-#ifdef DEBUG
-#define PRINT_DEBUG(x) printf(x)
-#define PRINT_DEBUG4(x,y,z,w) printf(x,y,z,w)    
-#define PRINT_DEBUG2(x,y) printf(x,y)
-#else
-    #define PRINT_DEBUG(x)
-#define PRINT_DEBUG4(x,y,z,w)
-#define PRINT_DEBUG2(x,y)
-#endif
+
 static void *getPosition(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;

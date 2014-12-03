@@ -1,12 +1,7 @@
 #include <fstream>
 #include <iostream>
-#include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <stdint.h>
-#include <string.h>
-#include <math.h>
 #include "MPUfiles/I2Cdev.h"
 #include "MPUfiles/MPU6050.h"
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
@@ -14,6 +9,16 @@
 #include <wiringPi.h>
 #include <sys/time.h>
 
+//#define DEBUG 
+#ifdef DEBUG
+#define PRINT_DEBUG(x) printf(x)
+#define PRINT_DEBUG4(x,y,z,w) printf(x,y,z,w)    
+#define PRINT_DEBUG2(x,y) printf(x,y)
+#else
+    #define PRINT_DEBUG(x)
+#define PRINT_DEBUG4(x,y,z,w)
+#define PRINT_DEBUG2(x,y)
+#endif
 // struct to hold rotation in degrees about X, Y and Z axis
 // for our project, X Y & Z are YAW PITCH & ROLL
 struct XYZposition {
