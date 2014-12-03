@@ -23,7 +23,7 @@ struct XYZposition {
 };
 
 // enum for the mode the device is in
-enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED };
+enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED, MODE_CALIBRATE };
 
 // forward declarations
 void initMPU(MPU6050 mpu);
@@ -38,6 +38,8 @@ void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2);
 void buttons();
 void lights();
 void setOffset();
+void calibrateMag(MPU6050 *mpu, struct XYZposition *r, struct XYZposition *z);
+void adjustMagVal(int16_t *m0,int16_t *m1,int16_t *m2, struct XYZposition *r, struct XYZposition *z);
 
 // global to hold the positions the servo should be in
 // set by thread1 and read by thread2
@@ -50,6 +52,12 @@ struct XYZposition lockPosition;
 
 // Stores the x-axis offset between the controller and the base
 int offset;
+
+// Stores magnetic calibration data
+struct XYZposition baseMagR;
+struct XYZposition baseMagZ;
+struct XYZposition controlMagR;
+struct XYZposition controlMagZ;
 
 //set to true if the position expected is not achievable by the
 //servos
@@ -238,7 +246,7 @@ void initMPU(MPU6050 mpu) {
     // (if it's going to break, usually the code will be 1)
     printf("DMP Initialization failed (code %d)\n", devStatus);
   }
-  
+
 }
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   // if programming failed, don't try to do anything
@@ -344,6 +352,10 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   int x, y, z;
 
   switch (deviceMode) {
+
+  case MODE_CALIBRATE: // Don't move servos
+    break;
+
   case MODE_CONTROLLABLE:
 
     x = cx;// + offset;
@@ -409,6 +421,55 @@ void setServo(SERVO servoNum, int position) {
   // */
 }
 
+void calibrateMag(MPU6050 *mpu, struct XYZposition *r, struct XYZposition *z) {
+  int maxx, maxy, maxz;
+  int minx, miny, minz;
+  int tempx, tempy, tempz;
+
+  mpu->getMag(&maxx, &maxy, &maxz);
+  minx = maxx;
+  miny = maxy;
+  minz = maxz;
+
+  for(int i=0; i<10000; ++i) {
+    mpu->getMag(&tempx, &tempy, &tempz);
+
+    if(tempx > maxx)
+      maxx = tempx;
+    if(tempy > maxy)
+      maxy = tempy;
+    if(tempz > maxz)
+      maxz = tempz;
+    if(tempx < minx)
+      minx = tempx;
+    if(tempy < miny)
+      miny = tempy;
+    if(tempz < minz)
+      minz = tempz;
+  }
+
+  r->x = .5 * (maxx - minx);
+  r->y = .5 * (maxy - miny);
+  r->z = .5 * (maxz - minz);
+
+  z->x = maxx - r->x;
+  z->y = maxy - r->y;
+  z->z = maxz - r->z;
+
+  for(int i=0; i<10; ++i) {
+    digitalWrite(LED, 1);
+    usleep(100000);
+    digitalWrite(LED, 0);
+    usleep(100000);
+  }
+}
+
+void adjustMagVal(int16_t *m0,int16_t *m1,int16_t *m2, struct XYZposition *r, struct XYZposition *z) {
+  *m0 = (*m0 - z->x) / r->x;
+  *m1 = (*m1 - z->y) / r->y;
+  *m2 = (*m2 - z->z) / r->z;
+}
+
 // 3 buttons- 1 for each mode
 // button push changes mode
 // called in main method()
@@ -421,15 +482,20 @@ void buttons() {
 
   usleep(100000); // need to test to find correct number
 
+  if (digitalRead(BUTTON1) == HIGH && digitalRead(BUTTON2) == HIGH && digitalRead(BUTTON3) == HIGH) {
+    deviceMode = MODE_CALIBRATE;
+    calibrateMag(&baseMPU, &baseMagR, &baseMagZ);
+    calibrateMag(&controlMPU, &controlMagR, &controlMagZ);
+  }
   // mode 1- controllable
-  if (digitalRead(BUTTON1) == HIGH) {
+  else if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
     printf("Button 1 pushed\n");
   }
 
   // mode 2- self-stabilize
-  if (digitalRead(BUTTON2) == HIGH) {
+  else if (digitalRead(BUTTON2) == HIGH) {
     // if button2 pushed (and released)
 
     pthread_mutex_lock(&servoPosMutex);
@@ -444,13 +510,12 @@ void buttons() {
   }
 
   // mode 3- combined
-  if (digitalRead(BUTTON3) == HIGH) {
+  else if (digitalRead(BUTTON3) == HIGH) {
     // if button3 pushed (and released)
 
     deviceMode = MODE_COMBINED;
     printf("Button 3 pushed\n");
   }
-
 }
 
 void setOffset() {
