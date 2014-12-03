@@ -7,13 +7,11 @@ static void *getPosition(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
   while (1) {
-    if (deviceMode != MODE_CALIBRATE &&
-        (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED))
+    if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
       getXYZ(&baseMPU, &basePosition);
 
     usleep(1000);
-    if (deviceMode != MODE_CALIBRATE &&
-        (deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED))
+    if(deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
       getXYZ(&controlMPU, &controllerPosition);
 
     // calculate neccesary servo position and writes to the servoPositions
@@ -36,6 +34,7 @@ static void *setPosition(void *arg) {
     setServo(servos[0], servoPosX);
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
+    usleep(400);
   }
 
   return (void *)0;
@@ -184,9 +183,6 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   switch (deviceMode) {
 
-  case MODE_CALIBRATE: // Don't move servos
-    break;
-
   case MODE_CONTROLLABLE:
 
     x = cx - controllerOffset;
@@ -239,7 +235,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   pthread_mutex_unlock(&servoPosMutex);
 }
 
-void setServo(SERVO servoNum, int position) {
+void setServo(int servoNum, int position) {
   //ServoBlaster driver expects input in range 0%-100% 
   position = (int)(position / 1.8);
   servoDriverFile << servoNum << "=" << position << "%" << std::endl;
@@ -251,11 +247,7 @@ void setServo(SERVO servoNum, int position) {
 
 void userModeControl() {
 
-  // not sure what all we can use
-  // http://wiringpi.com/
-  // https://projects.drogon.net/raspberry-pi/gpio-examples/tux-crossing/software/
-
-  usleep(100000); // need to test to find correct number
+  usleep(100000); 
 
   // mode 1- controllable
   if (digitalRead(BUTTON1) == HIGH) {
@@ -316,20 +308,41 @@ float waitStabalize(MPU6050 *mpu) {
   while (!stable) {
     for (int i = 0; i < 100;) {
       usleep(1000);
-      
-      if(getXYZ(mpu, &pos)){
-	i++;
-      
+      if (!dmpReady){
+	i--;
+	
+      }else{
+	// get current FIFO count
+	fifoCount = mpu->getFIFOCount();
+
+	if (fifoCount == 1024) {
+	  // reset so we can continue cleanly
+	  mpu->resetFIFO();
+	  //printf("FIFO overflow!\n");
+
+	  // otherwise, check for DMP data ready interrupt (this should happen
+	  // frequently)
+	} else if (fifoCount >= 42) {
+	  // read a packet from FIFO
+	  mpu->getFIFOBytes(fifoBuffer, packetSize);
+
+	  // display Euler angles in degrees
+	  mpu->dmpGetQuaternion(&q, fifoBuffer);
+	  mpu->dmpGetGravity(&gravity, &q);
+	  mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+	  printf("i: %d yaw %7.2f\n",i,ypr[0] * 180 / M_PI);
+	  i++;
+	}
 	if (i == 25)
 	  digitalWrite(LED, 0);
 	if (i == 75)
 	  digitalWrite(LED, 1);
 	if (i == 1) {
-	  startyaw = 90 + pos.x * 180 / M_PI;
+	  startyaw = 90+ypr[0] * 180 / M_PI;
 	  std::cout << "start Yaw: " << startyaw << "\t";
 	}
 	if (i == 99) {
-	  endyaw = 90 + pos.x * 180 / M_PI;
+	  endyaw = 90+ypr[0] * 180 / M_PI;
 	  std::cout << "End Yaw: " << endyaw << std::endl;
 	}
         
@@ -339,5 +352,5 @@ float waitStabalize(MPU6050 *mpu) {
     if (diff < .01 && diff > -.01)
       stable = true;
   }
-  return startyaw;
+  return endyaw;
 }

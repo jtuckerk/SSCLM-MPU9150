@@ -32,7 +32,7 @@ void initMPU(MPU6050 mpu);
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode);
 bool getXYZ(MPU6050 *mpu, struct XYZposition *pos);
-void setServo(SERVO servoNum, int position);
+void setServo(int servoNum, int position);
 void userModeControl();
 void lights();
 void setOffset(float base, float controller);
