@@ -24,16 +24,15 @@ struct XYZposition {
 };
 
 // enum for the mode the device is in
-enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED, MODE_CALIBRATE };
+enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED};
 
 // forward declarations
 void initMPU(MPU6050 mpu);
 void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
                        mode deviceMode);
 void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
-typedef int SERVO;
 void setServo(SERVO servoNum, int position);
-void buttons();
+void userModeControl();
 void lights();
 void setOffset(float base, float controller);
 float waitStabalize(MPU6050 *mpu);
@@ -51,21 +50,11 @@ struct XYZposition lockPosition;
 // Stores the x-axis offset between the controller and the base
 float baseOffset, controllerOffset;
 
-// Stores magnetic calibration data
-struct XYZposition baseMagR;
-struct XYZposition baseMagZ;
-struct XYZposition controlMagR;
-struct XYZposition controlMagZ;
-
 // set to true if the position expected is not achievable by the
 // servos
 bool XinBounds = true;
 bool YinBounds = true;
 bool ZinBounds = true;
-
-// magnetometer sensitivity values
-uint8_t baseMagSen[3];
-uint8_t contMagSen[3];
 
 // need to change address of one or both MPUs
 // they will both have default address out of the box
@@ -84,21 +73,14 @@ uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
-Quaternion q;   // [w, x, y, z]         quaternion container
-VectorInt16 aa; // [x, y, z]            accel sensor measurements
-VectorInt16
-    aaReal; // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16
-    aaWorld; // [x, y, z]            world-frame accel sensor measurements
-VectorFloat gravity; // [x, y, z]            gravity vector
-float euler[3];      // [psi, theta, phi]    Euler angle container
-float
-    ypr[3]; // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+Quaternion q;   // [w, x, y, z] quaternion container
+VectorFloat gravity; // [x, y, z] gravity vector
+float ypr[3]; // [yaw, pitch, roll] 
 
 #define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
 #define PI 3.14159
-SERVO servos[3] = {0, 1, 2};
+int servos[3] = {0, 1, 2};
 
 pthread_mutex_t servoPosMutex;
 std::ofstream servoDriverFile;
@@ -108,7 +90,7 @@ std::ofstream servoDriverFile;
 #define BUTTON3 4
 #define LED 16
 
-static void *positionControl(void *arg) {
+static void *getPosition(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
   while (1) {
@@ -127,7 +109,7 @@ static void *positionControl(void *arg) {
   }
   return (void *)0;
 }
-static void *thread2function(void *arg) {
+static void *setPosition(void *arg) {
 
   int servoPosX, servoPosY, servoPosZ;
 
@@ -138,12 +120,9 @@ static void *thread2function(void *arg) {
     servoPosZ = servoPositions.z;
     pthread_mutex_unlock(&servoPosMutex);
 
-    // std::cout << "x: "<<servoPosX<< " y: "<<servoPosY<< " z:
-    // "<<servoPosZ<<std::endl;
     setServo(servos[0], servoPosX);
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
-    usleep(100);
   }
 
   return (void *)0;
@@ -183,25 +162,22 @@ int main() {
   pthread_attr_init(&myattr);
 
   // thread1 gets MPU values and calculates desired servo position
-  pthread_create(&thread1, &myattr, positionControl, (void *)0);
+  pthread_create(&thread1, &myattr, getPosition, (void *)0);
   // thread2 gets desired servo positions and sets servos
-  pthread_create(&thread2, &myattr, thread2function, (void *)0);
+  pthread_create(&thread2, &myattr, setPosition, (void *)0);
   pthread_attr_destroy(&myattr);
 
   // continuously checks for mode changes and out of bounds errors
   while (true) {
-    buttons();
+    userModeControl();
   }
 
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
   return 0;
-}
 
-void initMPU(MPU6050 mpu) {
   // initialize device
   printf("Initializing I2C devices...\n");
-  mpu.initialize();
 
   // verify connection
   printf("Testing device connections...\n");
@@ -257,7 +233,6 @@ bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     // read a packet from FIFO
     mpu->getFIFOBytes(fifoBuffer, packetSize);
 
-    // display Euler angles in degrees
     mpu->dmpGetQuaternion(&q, fifoBuffer);
     mpu->dmpGetGravity(&gravity, &q);
     mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
@@ -360,7 +335,7 @@ void setServo(SERVO servoNum, int position) {
 // button push changes mode
 // called in main method()
 
-void buttons() {
+void userModeControl() {
 
   // not sure what all we can use
   // http://wiringpi.com/
