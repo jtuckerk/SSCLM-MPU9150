@@ -2,7 +2,16 @@
 // Amy Pickens, Nate Honold, Tucker Kirven
 
 #include "SSCLM.h"
-
+//#define DEBUG 
+#ifdef DEBUG
+#define PRINT_DEBUG(x) printf(x)
+#define PRINT_DEBUG4(x,y,z,w) printf(x,y,z,w)    
+#define PRINT_DEBUG2(x,y) printf(x,y)
+#else
+    #define PRINT_DEBUG(x)
+#define PRINT_DEBUG4(x,y,z,w)
+#define PRINT_DEBUG2(x,y)
+#endif
 static void *getPosition(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
@@ -42,8 +51,17 @@ static void *setPosition(void *arg) {
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
     servoPosUpdated = false;
+    
+    //the below code was used to check how often the
+    //servos were being updated in each mode
+    //we found the combined mode which reads both MPU's
+    //to take about 5 times as long as the other 2 modes
+    /*
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    printf("Nano seconds from last set: %d\n",
+		currentTime.tv_nsec-lastTime.tv_nsec);
+		lastTime.tv_nsec = currentTime.tv_nsec;*/
   }
-
   return (void *)0;
 }
 
@@ -145,7 +163,7 @@ bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   if (fifoCount == 1024) {
     // reset so we can continue cleanly
     mpu->resetFIFO();
-    // std::cout<<"FIFO overflow!\n";
+    // DEBUG_PRINT("FIFO overflow!\n";
 
     // otherwise, check for DMP data ready interrupt (this should happen
     // frequently)
@@ -216,7 +234,6 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     y = 90 + (cy - by);
     z = 180 - (90 + (cz - bz));
    
-
     break;
 
   default:
@@ -230,10 +247,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
   YinBounds = boundServo(&y);
   ZinBounds = boundServo(&z);
   lights();
-  std::cout << "BASE: " << bx << " " << by << " " << bz << "\t";
-  std::cout << "CONTROLLER: " << cx << " " << cy << " " << cz << "\t";
-  std::cout << "SERVO: "
-            << " " << x << " " << y << " " << z << " " << std::endl;
+  PRINT_DEBUG4("BASE: %d %d %d \t", bx, by, bz);
+  PRINT_DEBUG4("CONTROLLER: %d %d %d \t ", cx, cy, cz);
+  PRINT_DEBUG4("SERVO: %d %d %d \n", x, y, z);
 
   pthread_mutex_lock(&servoPosMutex);
   servoPositions.x = x;
@@ -260,7 +276,7 @@ void userModeControl() {
   if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
-    std::cout<<"Button 1 pushed\n";
+    PRINT_DEBUG("Button 1 pushed\n");
   }
 
   // mode 2- self-stabilize
@@ -274,7 +290,7 @@ void userModeControl() {
     pthread_mutex_unlock(&servoPosMutex);
 
     deviceMode = MODE_STABILIZE;
-    std::cout<<"Button 2 pushed\n";
+    PRINT_DEBUG("Button 2 pushed\n");
     
   }
 
@@ -283,7 +299,7 @@ void userModeControl() {
     // if button3 pushed (and released)
 
     deviceMode = MODE_COMBINED;
-    std::cout<<"Button 3 pushed: Combined Mode\n";
+    PRINT_DEBUG("Button 3 pushed: Combined Mode\n");
   }
 }
 
@@ -346,11 +362,11 @@ float waitStabalize(MPU6050 *mpu) {
 	  digitalWrite(LED, 1);
 	if (i == 1) {
 	  startyaw = 90+ypr[0] * 180 / M_PI;
-	  std::cout << "start Yaw: " << startyaw << "\t";
+	  std::cout<< "start Yaw: " << startyaw << "\t";
 	}
 	if (i == 99) {
 	  endyaw = 90+ypr[0] * 180 / M_PI;
-	  std::cout << "End Yaw: " << endyaw << std::endl;
+	  std::cout<< "End Yaw: " << endyaw << std::endl;
 	}
         
       }

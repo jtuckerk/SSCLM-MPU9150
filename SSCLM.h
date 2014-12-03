@@ -12,6 +12,7 @@
 #include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
 #include <pthread.h>
 #include <wiringPi.h>
+#include <sys/time.h>
 
 // struct to hold rotation in degrees about X, Y and Z axis
 struct XYZposition {
@@ -99,3 +100,5 @@ int servos[3] = {0, 1, 2};
 #define BUTTON2 3
 #define BUTTON3 4
 #define LED 16
+
+struct timespec lastTime, currentTime;
