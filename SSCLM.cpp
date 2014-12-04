@@ -384,9 +384,9 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 
   case MODE_COMBINED:
 
-    x = ((cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
-    y = (cy) - by;
-    z = 180-((cz) - bz);
+    x = (2*(cx-controllerOffset)) - bx-baseOffset ;// + offset; // cx - (bx - cx)
+    y = (2*cy) - by;
+    z = 180-((2*cz) - bz);
     //printf("MODE3: %d %d %d\n", x, y, z);
 
     break;
@@ -590,7 +590,7 @@ void magHeading(MPU6050 *mpu, int16_t *m0,int16_t *m1,int16_t *m2){
 }
 float waitStabalize(MPU6050 *mpu){
   bool stable = false;
-  
+  digitalWrite(LED, 1);
   float startyaw, endyaw;
   while (!stable){
     // if programming failed, don't try to do anything
@@ -620,6 +620,11 @@ float waitStabalize(MPU6050 *mpu){
 	  mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
 	  printf("i: %d yaw %7.2f\n",i,ypr[0] * 180 / M_PI);
 	  i++;
+	  
+	  if(i==250)
+	    digitalWrite(LED, 0);
+	  if(i==750)
+	    digitalWrite(LED, 1);
 	  if(i==1){
 	    startyaw = 90+ypr[0] * 180 / M_PI;
 	    std::cout<< "start Yaw: "<< startyaw<<"\t";
