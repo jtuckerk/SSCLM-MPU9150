@@ -83,6 +83,9 @@ float ypr[3];        // [yaw, pitch, roll]
 
 //Protects the global variable holding the positions of the servo 
 pthread_mutex_t servoPosMutex;
+pthread_mutex_t servoCondMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t servoCond = PTHREAD_COND_INITIALIZER;
+bool servoPosUpdated = false;
 
 //Driver file for servo control using ServoBlaster Raspberry Pi driver
 std::ofstream servoDriverFile;

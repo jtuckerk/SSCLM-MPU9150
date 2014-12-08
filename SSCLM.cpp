@@ -17,6 +17,8 @@ static void *getPosition(void *arg) {
     // calculate neccesary servo position and writes to the servoPositions
     // global variable
     calculateServoPos(&basePosition, &controllerPosition, deviceMode);
+    servoPosUpdated = true;
+    pthread_cond_signal( &servoCond );
   }
   return (void *)0;
 }
@@ -25,6 +27,11 @@ static void *setPosition(void *arg) {
   int servoPosX, servoPosY, servoPosZ;
 
   while (1) {
+    pthread_mutex_lock(&servoCondMutex);
+    while(!servoPosUpdated)
+      pthread_cond_wait( &servoCond, &servoCondMutex);
+    pthread_mutex_unlock(&servoCondMutex);
+    
     pthread_mutex_lock(&servoPosMutex);
     servoPosX = servoPositions.x;
     servoPosY = servoPositions.y;
@@ -34,6 +41,7 @@ static void *setPosition(void *arg) {
     setServo(servos[0], servoPosX);
     setServo(servos[1], servoPosY);
     setServo(servos[2], servoPosZ);
+    servoPosUpdated = false;
     usleep(400);
   }
 
