@@ -1,94 +1,7 @@
 // Self Stabilizing Controllable Laser Mount
 // Amy Pickens, Nate Honold, Tucker Kirven
 
-#include <fstream>
-#include <iostream>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
-#include "MPUfiles/I2Cdev.h"
-#include "MPUfiles/MPU6050.h"
-#include "MPUfiles/MPU6050_6Axis_MotionApps20.h"
-#include <pthread.h>
-#include <wiringPi.h>
-
-// struct to hold rotation in degrees about X, Y and Z axis
-struct XYZposition {
-  int x;
-  int y;
-  int z;
-};
-
-// enum for the mode the device is in
-enum mode { MODE_CONTROLLABLE, MODE_STABILIZE, MODE_COMBINED};
-
-// forward declarations
-void initMPU(MPU6050 mpu);
-void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
-                       mode deviceMode);
-void getXYZ(MPU6050 *mpu, struct XYZposition *pos);
-void setServo(SERVO servoNum, int position);
-void userModeControl();
-void lights();
-void setOffset(float base, float controller);
-float waitStabalize(MPU6050 *mpu);
-
-// global to hold the positions the servo should be in
-// set by thread1 and read by thread2
-// Karsai wants the value passed to thread2 to be a
-// change in the current position - not an absolute value
-struct XYZposition servoPositions;
-
-// Stores the position for the arm to maintain during stabilize and combined
-// modes
-struct XYZposition lockPosition;
-
-// Stores the x-axis offset between the controller and the base
-float baseOffset, controllerOffset;
-
-// set to true if the position expected is not achievable by the
-// servos
-bool XinBounds = true;
-bool YinBounds = true;
-bool ZinBounds = true;
-
-// need to change address of one or both MPUs
-// they will both have default address out of the box
-// changing them once should be saved on the device
-MPU6050 baseMPU(MPU6050_ADDRESS_AD0_HIGH), controlMPU;
-
-// global mode to be set by thread3 and read by thread1
-enum mode deviceMode;
-// MPU control/status vars
-bool dmpReady = false; // set true if DMP init was successful
-uint8_t mpuIntStatus;  // holds actual interrupt status byte from MPU
-uint8_t devStatus; // return status after each device operation (0 = success, !0
-                   // = error)
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
-
-// orientation/motion vars
-Quaternion q;   // [w, x, y, z] quaternion container
-VectorFloat gravity; // [x, y, z] gravity vector
-float ypr[3]; // [yaw, pitch, roll] 
-
-#define SERVO_MIN 20
-#define SERVO_MAX (180 - SERVO_MIN)
-#define PI 3.14159
-int servos[3] = {0, 1, 2};
-
-pthread_mutex_t servoPosMutex;
-std::ofstream servoDriverFile;
-
-#define BUTTON1 2 // WiringPi pin numbers
-#define BUTTON2 3
-#define BUTTON3 4
-#define LED 16
+#include "SSCLM.h"
 
 static void *getPosition(void *arg) {
 
@@ -178,21 +91,21 @@ int main() {
 }
 void initMPU(MPU6050 mpu) {
   // initialize device
-  printf("Initializing I2C devices...\n");
+  std::cout<<"Initializing I2C devices...\n";
 
   // verify connection
-  printf("Testing device connections...\n");
+  std::cout<<"Testing device connections...\n";
   printf(mpu.testConnection() ? "MPU6050 connection successful\n"
                               : "MPU6050 connection failed\n");
 
   // load and configure the DMP
-  printf("Initializing DMP...\n");
+  std::cout<<"Initializing DMP...\n";
   devStatus = mpu.dmpInitialize();
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
     // turn on the DMP, now that it's ready
-    printf("Enabling DMP...\n");
+    std::cout<<"Enabling DMP...\n";
     mpu.setDMPEnabled(true);
 
     // enable Arduino interrupt detection
@@ -203,7 +116,7 @@ void initMPU(MPU6050 mpu) {
 
     // set our DMP Ready flag so the main loop() function knows it's okay to use
     // it
-    printf("DMP ready!\n");
+    std::cout<<"DMP ready!\n";
     dmpReady = true;
 
     // get expected DMP packet size for later comparison
@@ -213,7 +126,7 @@ void initMPU(MPU6050 mpu) {
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
-    printf("DMP Initialization failed (code %d)\n", devStatus);
+    std::cout<<"DMP Initialization failed (code << devStatus"<<")\n";
   }
 }
 bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
@@ -226,7 +139,7 @@ bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
   if (fifoCount == 1024) {
     // reset so we can continue cleanly
     mpu->resetFIFO();
-    // printf("FIFO overflow!\n");
+    // std::cout<<"FIFO overflow!\n";
 
     // otherwise, check for DMP data ready interrupt (this should happen
     // frequently)
@@ -279,7 +192,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
     x = cx - controllerOffset;
     y = cy;
     z = 180 - cz;
-    // printf("MODE1: %d %d %d\n", x, y, z);
+   
 
     break;
 
@@ -289,7 +202,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
         baseOffset; // lockPosition.x - (bx - lockPosition.x)
     y = 90 + (lockPosition.y - by);
     z = 180 - (90 + (lockPosition.z - bz));
-    // printf("MODE2: %d %d %d\n", x, y, z);
+   
 
     break;
 
@@ -299,7 +212,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
         baseOffset; // + offset; // cx - (bx - cx)
     y = 90 + (cy - by);
     z = 180 - (90 + (cz - bz));
-    // printf("MODE3: %d %d %d\n", x, y, z);
+   
 
     break;
 
@@ -348,7 +261,7 @@ void userModeControl() {
   if (digitalRead(BUTTON1) == HIGH) {
     // if button1 pushed (and released)
     deviceMode = MODE_CONTROLLABLE;
-    printf("Button 1 pushed\n");
+    std::cout<<"Button 1 pushed\n";
   }
 
   // mode 2- self-stabilize
@@ -362,8 +275,8 @@ void userModeControl() {
     pthread_mutex_unlock(&servoPosMutex);
 
     deviceMode = MODE_STABILIZE;
-    printf("Button 2 pushed\n");
-    printf("MODE2: %d %d %d\n", lockPosition.x, lockPosition.y, lockPosition.z);
+    std::cout<<"Button 2 pushed\n";
+    
   }
 
   // mode 3- combined
@@ -371,7 +284,7 @@ void userModeControl() {
     // if button3 pushed (and released)
 
     deviceMode = MODE_COMBINED;
-    printf("Button 3 pushed: Combined Mode\n");
+    std::cout<<"Button 3 pushed: Combined Mode\n";
   }
 }
 
