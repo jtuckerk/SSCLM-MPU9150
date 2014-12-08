@@ -170,12 +170,13 @@ int main() {
   // continuously checks for mode changes and out of bounds errors
   while (true) {
     userModeControl();
-  }
+  } 
 
   pthread_join(thread1, 0);
   pthread_join(thread2, 0);
   return 0;
-
+}
+void initMPU(MPU6050 mpu) {
   // initialize device
   printf("Initializing I2C devices...\n");
 
