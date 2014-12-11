@@ -14,6 +14,7 @@
 #include <wiringPi.h>
 
 // struct to hold rotation in degrees about X, Y and Z axis
+// for our project, X Y & Z are YAW PITCH & ROLL
 struct XYZposition {
   int x;
   int y;
@@ -34,7 +35,7 @@ void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
 bool getXYZ(MPU6050 *mpu, struct XYZposition *pos);
 void setServo(int servoNum, int position);
 void userModeControl();
-void lights();
+void outOfBoundsLight();
 void setOffset(float base, float controller);
 float waitStabalize(MPU6050 *mpu);
 
@@ -92,6 +93,7 @@ std::ofstream servoDriverFile;
 
 #define SERVO_MIN 20
 #define SERVO_MAX (180 - SERVO_MIN)
+#define ZEROPOS 90
 #define PI 3.14159
 int servos[3] = {0, 1, 2};
 
