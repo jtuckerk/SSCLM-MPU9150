@@ -7,14 +7,51 @@ static void *getPosition(void *arg) {
 
   struct XYZposition basePosition, controllerPosition;
   while (1) {
+    if (deviceMode == MODE_STABILIZE || deviceMode == MODE_COMBINED)
+      getXYZ(&baseMPU, &basePosition);
+
   
     if(deviceMode == MODE_CONTROLLABLE || deviceMode == MODE_COMBINED)
       getXYZ(&controlMPU, &controllerPosition);
 
     // calculate neccesary servo position and writes to the servoPositions
     // global variable
-
+    calculateServoPos(&basePosition, &controllerPosition, deviceMode);
+    servoPosUpdated = true;
     pthread_cond_signal( &servoCond );
+  }
+  return (void *)0;
+}
+static void *setPosition(void *arg) {
+
+  int servoPosX, servoPosY, servoPosZ;
+
+  while (1) {
+    pthread_mutex_lock(&servoCondMutex);
+    while(!servoPosUpdated)
+      pthread_cond_wait( &servoCond, &servoCondMutex);
+    pthread_mutex_unlock(&servoCondMutex);
+    
+    pthread_mutex_lock(&servoPosMutex);
+    servoPosX = servoPositions.x;
+    servoPosY = servoPositions.y;
+    servoPosZ = servoPositions.z;
+    pthread_mutex_unlock(&servoPosMutex);
+
+    setServo(servos[0], servoPosX);
+    setServo(servos[1], servoPosY);
+    setServo(servos[2], servoPosZ);
+    servoPosUpdated = false;
+    
+    //the below code was used to check how often the
+    //servos were being updated in each mode
+    //we found the combined mode which reads both MPU's
+    //to take about 5 times as long as the other 2 modes
+    /*
+    clock_gettime(CLOCK_REALTIME, &currentTime);
+    printf("Nano seconds from last set: %d\n",
+		currentTime.tv_nsec-lastTime.tv_nsec);
+		lastTime.tv_nsec = currentTime.tv_nsec;*/
   }
   return (void *)0;
 }
@@ -23,10 +60,27 @@ int main() {
 
   initMPU(controlMPU);
   usleep(100000); //@@
+  initMPU(baseMPU);
+  usleep(100000); //@@
 
+  //initializes WiringPi IO library
+  wiringPiSetup();
+  // Set I/O pin directions
+  pinMode(LED, OUTPUT);
+  pinMode(BUTTON1, INPUT);
+  pinMode(BUTTON2, INPUT);
+  pinMode(BUTTON3, INPUT);
+
+  // waits for sensor values to settle
   // this usually takes about 15 seconds
   float controller = waitStabalize(&controlMPU);
+  float base = waitStabalize(&baseMPU);
  
+  setOffset(base, controller);
+
+  deviceMode = MODE_CONTROLLABLE;
+  // Opens device driver file that controls servo motors
+  servoDriverFile.open("/dev/servoblaster");
   
   pthread_mutexattr_t mutexattr;
   pthread_mutexattr_init(&mutexattr);
@@ -41,11 +95,16 @@ int main() {
   // thread1 gets MPU values and calculates desired servo position
   pthread_create(&thread1, &myattr, getPosition, (void *)0);
   // thread2 gets desired servo positions and sets servos
-
+  pthread_create(&thread2, &myattr, setPosition, (void *)0);
   pthread_attr_destroy(&myattr);
 
-  pthread_join(thread1, 0);
+  // continuously checks for mode changes and out of bounds errors
+  while (true) {
+    userModeControl();
+  } 
 
+  pthread_join(thread1, 0);
+  pthread_join(thread2, 0);
   return 0;
 }
 // MPU initialization code - borrowed from a demo 
@@ -125,7 +184,159 @@ bool getXYZ(MPU6050 *mpu, struct XYZposition *pos) {
     return true;
   }
 }
+// keeps the servo from shaking by trying to
+// to go beyond its maximum or minimum position
+bool boundServo(int *pos) {
+  if (*pos > SERVO_MAX) {
+    *pos = SERVO_MAX;
+    return false;
+  } else if (*pos < SERVO_MIN) {
+    *pos = SERVO_MIN;
+    return false;
+  } else {
+    return true;
+  }
+}
 
+void calculateServoPos(struct XYZposition *base, struct XYZposition *controller,
+                       mode deviceMode) {
+
+  int cx = controller->x;
+  int cy = controller->y;
+  int cz = controller->z;
+  int bx = base->x;
+  int by = base->y;
+  int bz = base->z;
+
+  int x, y, z;
+
+  switch (deviceMode) {
+
+  case MODE_CONTROLLABLE:
+    //mimics the controller 
+    x = cx - controllerOffset;
+    y = cy;
+    z = 180 - cz;
+    break;
+
+  case MODE_STABILIZE:
+    // offsets to maintain the last position before mode switch
+    x = ZEROPOS + (lockPosition.x - bx) -
+        baseOffset; // lockPosition.x - (bx - lockPosition.x)
+    y = ZEROPOS + (lockPosition.y - by);
+    z = 180 - (ZEROPOS + (lockPosition.z - bz)); //@@
+    break;
+
+  case MODE_COMBINED:
+    // mimics the controller no matter the base position
+    x = ZEROPOS + ((cx - controllerOffset) - bx) -
+        baseOffset; // + offset; // cx - (bx - cx)
+    y = ZEROPOS + (cy - by);
+    z = 180 - (ZEROPOS + (cz - bz));
+
+    break;
+
+  default:
+    x = ZEROPOS;
+    y = ZEROPOS;
+    z = ZEROPOS;
+    break;
+  }
+
+  // Ensures the servos are not set beyond their capabilities
+  // sets a flag if any servo is expected to go out of range
+  XinBounds = boundServo(&x);
+  YinBounds = boundServo(&y);
+  ZinBounds = boundServo(&z);
+
+  PRINT_DEBUG4("BASE: %d %d %d \t", bx, by, bz);
+  PRINT_DEBUG4("CONTROLLER: %d %d %d \t ", cx, cy, cz);
+  PRINT_DEBUG4("SERVO: %d %d %d \n", x, y, z);
+  
+  // sets lights if any servo cannot reach the requested position 
+  outOfBoundsLight();
+  
+
+
+  pthread_mutex_lock(&servoPosMutex);
+  servoPositions.x = x;
+  servoPositions.y = y;
+  servoPositions.z = z;
+  pthread_mutex_unlock(&servoPosMutex);
+}
+
+// Takes a servo number 0, 1, 2 - x, y, z respectively
+// and sets them to a value between 0 and 100%
+// our servos do not operate well beyond 20 and 80% so
+// setServo will always recieve values within that range
+void setServo(int servoNum, int position) {
+  //ServoBlaster driver expects input in range 0%-100% 
+  position = (int)(position / 1.8);
+  servoDriverFile << servoNum << "=" << position << "%" << std::endl;
+}
+
+// 3 buttons- 1 for each mode
+// button push changes mode
+// called in main method()
+void userModeControl() {
+
+  usleep(100000); 
+
+  // mode 1- controllable
+  if (digitalRead(BUTTON1) == HIGH) {
+    // if button1 pushed (and released)
+    deviceMode = MODE_CONTROLLABLE;
+    PRINT_DEBUG("Button 1 pushed\n");
+  }
+
+  // mode 2- self-stabilize
+  else if (digitalRead(BUTTON2) == HIGH) {
+    // if button2 pushed (and released)
+
+    //sets to stabalize at the most recent position
+    pthread_mutex_lock(&servoPosMutex);
+    lockPosition.x = servoPositions.x;
+    lockPosition.y = servoPositions.y;
+    lockPosition.z = servoPositions.z;
+    pthread_mutex_unlock(&servoPosMutex);
+
+    deviceMode = MODE_STABILIZE;
+    PRINT_DEBUG("Button 2 pushed\n");
+    
+  }
+
+  // mode 3- combined
+  else if (digitalRead(BUTTON3) == HIGH) {
+    // if button3 pushed (and released)
+
+    deviceMode = MODE_COMBINED;
+    PRINT_DEBUG("Button 3 pushed: Combined Mode\n");
+  }
+}
+// When the two MPU's are initialized facing the same direction
+// their YAW or Z values may still be different, this sets the 
+// base MPU to be the zeroPosition (mechanically fixed at that position)
+// and zeroes the controller off of that position value.
+void setOffset(float base, float controller) {
+
+  baseOffset = base - ZEROPOS;
+  controllerOffset = controller - ZEROPOS - baseOffset;
+}
+
+// lights up lights when servo is expected to do something it cannot do
+// Called after servo position is bounded in calculateServoPos
+void outOfBoundsLight() {
+
+  if (!XinBounds || !YinBounds || !ZinBounds) {
+    // write 1 to turn on LED
+    digitalWrite(LED, 1);
+
+  } else {
+    // write 0 to turn off LED
+    digitalWrite(LED, 0);
+  }
+}
+// Upon initialization the MPU's yaw value can take anywhere
 // between a few milliseconds and 15 seconds to stabalize 
 // while still. This algorithm ensures that the position
 // will no longer drift once the device is being used
